@@ -1,4 +1,7 @@
-def update_score(player_score, opponent_score, game_score, set_score, result, tiebreaker_active):
+def update_score(player_score, opponent_score, game_score, set_score, result, tiebreaker_active, reason=None, stats=None):
+    if stats is None:
+        stats = {"Aces": [0, 0], "Winners": [0, 0], "Double Fault": [0, 0], "Volleys Won": [0, 0]}
+
     if result == "Won":  
         player_score, opponent_score, game_score, set_score, tiebreaker_active = calculate_tennis_score(
             player_score, opponent_score, game_score, set_score, True, tiebreaker_active
@@ -8,7 +11,12 @@ def update_score(player_score, opponent_score, game_score, set_score, result, ti
             opponent_score, player_score, game_score, set_score, False, tiebreaker_active
         )
 
-    return player_score, opponent_score, game_score, set_score, tiebreaker_active
+        # Check if the loss was due to a double fault
+        if reason == "Double Fault":
+            stats["Double Fault"][1] += 1  # Increase opponent's double fault count
+
+    return player_score, opponent_score, game_score, set_score, tiebreaker_active, stats
+
 
 
 def calculate_tennis_score(player, opponent, game_score, set_score, is_player, tiebreaker_active):

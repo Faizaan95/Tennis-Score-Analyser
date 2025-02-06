@@ -7,6 +7,7 @@ from score_manager import update_score, get_score_text
 from graph_generator import generate_graph
 from stats_generator import collect_stats
 
+# Main screen
 class TennisScoreLayout(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -17,14 +18,15 @@ class TennisScoreLayout(Screen):
         self.game_score = [0, 0]  # [Player Games, Opponent Games]
         self.set_score = [0, 0]  # [Player Sets, Opponent Sets]
         self.tiebreaker_active = False
-        self.stats = {"Volley": [0, 0], "Winner": [0, 0], "Ace": [0, 0], "Double Fault": [0, 0]}
+        self.stats = {"Volley": [0, 0], "Winner": [0, 0], "Ace": [0, 0], "Double Fault": [0, 0]}  # Point type
 
-        # Layout and buttons
+        # Layout 
         main_layout = BoxLayout(orientation="horizontal", spacing=10, padding=10)
         self.score_layout = BoxLayout(orientation="vertical", size_hint=(0.7, 1))
         self.score_label = Label(text=get_score_text(self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active), font_size=24)
         self.score_layout.add_widget(self.score_label)
         
+        # Buttons
         self.button_layout = BoxLayout(orientation="vertical", size_hint=(0.3, 1))
         self.button_layout.add_widget(Button(text="Won", on_press=lambda btn: self.show_prompt("Won")))
         self.button_layout.add_widget(Button(text="Lost", on_press=lambda btn: self.show_prompt("Lost")))
@@ -47,18 +49,39 @@ class TennisScoreLayout(Screen):
         self.popup.open()
 
     def update_score(self, point_type, result):
-        self.stats[point_type][0 if result == "Won" else 1] += 1  # Update stats
+        """ Updates the score and stats based on the selected point type and result. """
+        
+        if result == "Lost" and point_type == "Double Fault":
+            reason = "Double Fault"  # Mark as a double fault loss
+        else:
+            reason = None  
 
-        self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active = update_score(
-            self.player_score, self.opponent_score, self.game_score, self.set_score, result, self.tiebreaker_active
+        # Update stats (track for opponent if it's a double fault)
+        if point_type == "Double Fault":
+            if result == "Won":  # Player won the point → Opponent made a double fault
+                self.stats["Double Fault"][1] += 1  # Increase **opponent's** double fault count
+            elif  result == "Lost":  # Player won the point → Opponent made a double fault
+                self.stats["Double Fault"][0] += 1
+                self.stats["Double Fault"][1] += -1 #opponents count was going up as well without this line of code 
+        else:
+            self.stats[point_type][0 if result == "Won" else 1] += 1  # Update stats normally
+
+
+        # Update score
+        self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active, self.stats = update_score(
+            self.player_score, self.opponent_score, self.game_score, self.set_score, result, self.tiebreaker_active, reason, self.stats
         )
+
+        # Update UI
         self.score_label.text = get_score_text(self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active)
         self.popup.dismiss()
 
+        # Handle tiebreaker
         if self.tiebreaker_active:
             self.show_tiebreaker_prompt()
 
     def show_tiebreaker_prompt(self):
+        """ Handles tiebreaker UI. """
         self.tiebreaker_popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
 
         self.tiebreaker_label = Label(text=f"Tiebreaker Score: {self.player_score} - {self.opponent_score}")
@@ -74,6 +97,7 @@ class TennisScoreLayout(Screen):
         self.tiebreaker_popup.open()
 
     def update_tiebreaker(self, player_won):
+        """ Updates tiebreaker score. """
         self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active = update_score(
             self.player_score, self.opponent_score, self.game_score, self.set_score, "Won" if player_won else "Lost", self.tiebreaker_active
         )
@@ -85,9 +109,11 @@ class TennisScoreLayout(Screen):
             self.tiebreaker_popup.dismiss()
 
     def generate_graph(self, instance):
+        """ Generates the score progression graph. """
         generate_graph()
 
     def go_to_stats_page(self, instance):
+        """ Navigates to the stats page and passes updated stats. """
         stats_screen = self.manager.get_screen("stats")
         stats_screen.update_stats(self.stats)  # Pass stats to the stats page
         self.manager.current = "stats"
