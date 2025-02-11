@@ -43,10 +43,29 @@ def share_file(file_path, mime_type="application/pdf"):
     else:
         print(f"Sharing not supported on this platform. File saved at {file_path}")
 
-def collect_stats():
-    return {
-        "Aces": 5,
-        "Winners": 10,
-        "Double Faults": 2,
-        "Volleys Won": 8,
+def collect_stats(match_stats):
+    """ Returns both basic and advanced tennis match stats. """
+
+    # Basic Stats
+    stats = {
+        "Aces": match_stats["Ace"],
+        "Winners": match_stats["Winner"],
+        "Volleys": match_stats["Volley"],
+        "Double Faults": match_stats["Double Fault"]
     }
+
+    # Advanced Stats (Win percentages)
+    total_points = sum(stats["Aces"]) + sum(stats["Winners"]) + sum(stats["Volleys"]) + sum(stats["Double Faults"])
+    
+    if total_points > 0:
+        stats["Ace Percentage"] = round((stats["Aces"][0] / total_points) * 100, 2)
+        stats["Winner Percentage"] = round((stats["Winners"][0] / total_points) * 100, 2)
+        stats["Volley Percentage"] = round((stats["Volleys"][0] / total_points) * 100, 2)
+        stats["Double Fault Percentage"] = round((stats["Double Faults"][0] / total_points) * 100, 2)
+    else:
+        stats["Ace Percentage"] = 0
+        stats["Winner Percentage"] = 0
+        stats["Volley Percentage"] = 0
+        stats["Double Fault Percentage"] = 0
+
+    return stats

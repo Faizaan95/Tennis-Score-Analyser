@@ -33,8 +33,9 @@ class TennisScoreLayout(Screen):
         self.button_layout.add_widget(Button(text="Won", on_press=lambda btn: self.show_prompt("Won")))
         self.button_layout.add_widget(Button(text="Lost", on_press=lambda btn: self.show_prompt("Lost")))
         self.button_layout.add_widget(Button(text="Undo", on_press=self.undo_last_action))
-        self.button_layout.add_widget(Button(text="Generate Graph", on_press=self.generate_graph))
         self.button_layout.add_widget(Button(text="Generate Stats", on_press=self.go_to_stats_page))
+        self.button_layout.add_widget(Button(text="End Match", on_press=self.generate_graph))
+        
         main_layout.add_widget(self.button_layout)
 
         # Live stats label
@@ -130,7 +131,8 @@ class TennisScoreLayout(Screen):
     def go_to_stats_page(self, instance):
         """ Navigates to the stats page and passes updated stats. """
         stats_screen = self.manager.get_screen("stats")
-        stats_screen.update_stats(self.stats)  # Pass stats to the stats page
+        computed_stats = collect_stats(self.stats)  # Compute stats before passing
+        stats_screen.update_stats(computed_stats)  
         self.manager.current = "stats"
 
     def get_live_stats_text(self):
