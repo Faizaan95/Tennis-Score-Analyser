@@ -45,8 +45,13 @@ def share_file(file_path, mime_type="application/pdf"):
 
 def collect_stats(match_stats):
     """ Returns both basic and advanced tennis match stats. """
+    
 
-    # Basic Stats
+    print(f"RECEIVED IN collect_stats(): {match_stats}")  
+
+    if not match_stats:
+        print("WARNING: match_stats is empty!")
+
     stats = {
         "Aces": match_stats["Ace"],
         "Winners": match_stats["Winner"],
@@ -54,6 +59,7 @@ def collect_stats(match_stats):
         "Double Faults": match_stats["Double Fault"]
     }
 
+    print(f"PROCESSED IN collect_stats(): {stats}")
     # Advanced Stats (Win percentages)
     total_points = sum(stats["Aces"]) + sum(stats["Winners"]) + sum(stats["Volleys"]) + sum(stats["Double Faults"])
     

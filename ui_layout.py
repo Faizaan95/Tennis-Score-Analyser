@@ -12,27 +12,39 @@ class TennisScoreLayout(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-         # Variables
+        # Variables
         self.player_score = 0
         self.opponent_score = 0
         self.game_score = [0, 0]  # [Player Games, Opponent Games]
         self.set_score = [0, 0]  # [Player Sets, Opponent Sets]
         self.tiebreaker_active = False
-        self.stats = {"Volley": [0, 0], "Winner": [0, 0], "Ace": [0, 0], "Double Fault": [0, 0]}  # Point type
+        self.is_player1_serving = True  # Player 1 starts as the server
+
+        # Track advanced stats
+        self.stats = {
+            "First Serve Winners": [0, 0],
+            "Second Serve Winners": [0, 0],
+            "First Serve Aces": [0, 0],
+            "Second Serve Aces": [0, 0],
+            "First Serve Volleys": [0, 0],
+            "Second Serve Volleys": [0, 0],
+            "Double Faults": [0, 0]  # Stays independent
+        }
+        
         self.history = []  # Stores multiple past states for undo actions
 
-        # Layout 
+        # Layout
         main_layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
 
-        # Score display
-        self.score_label = Label(text=get_score_text(self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active), font_size=24)
+        # Score display with server indicator
+        self.score_label = Label(text=self.get_score_display(), font_size=24)
         main_layout.add_widget(self.score_label)
 
         # Buttons layout
         self.button_layout = BoxLayout(orientation="horizontal", size_hint=(1, 0.2))
-        self.button_layout.add_widget(Button(text="Won", on_press=lambda btn: self.show_prompt("Won")))
-        self.button_layout.add_widget(Button(text="Lost", on_press=lambda btn: self.show_prompt("Lost")))
-        self.button_layout.add_widget(Button(text="Undo", on_press=self.undo_last_action))
+        self.button_layout.add_widget(Button(text="Won", on_press=lambda btn: self.show_serve_prompt("Won")))
+        self.button_layout.add_widget(Button(text="Lost", on_press=lambda btn: self.show_serve_prompt("Lost")))
+        self.button_layout.add_widget(Button(text="Switch Server", on_press=self.switch_server))
         self.button_layout.add_widget(Button(text="Generate Stats", on_press=self.go_to_stats_page))
         self.button_layout.add_widget(Button(text="End Match", on_press=self.generate_graph))
         
@@ -44,85 +56,98 @@ class TennisScoreLayout(Screen):
 
         self.add_widget(main_layout)
 
-    def show_prompt(self, result):
-        options = ["Volley", "Winner", "Ace", "Double Fault"]
+    def get_score_display(self):
+        """ Returns formatted score text with server indicator. """
+        server_dot_p1 = "• " if self.is_player1_serving else ""
+        server_dot_p2 = "• " if not self.is_player1_serving else ""
+
+        return (f"{server_dot_p1}Player 1: {self.player_score} - {self.opponent_score} {server_dot_p2}\n"
+                f"Games: {self.game_score[0]} - {self.game_score[1]}\n"
+                f"Sets: {self.set_score[0]} - {self.set_score[1]}")
+
+    def switch_server(self, instance):
+        """ Manually switch the server. """
+        self.is_player1_serving = not self.is_player1_serving
+        self.score_label.text = self.get_score_display()
+
+    def show_serve_prompt(self, result):
+        """ Ask for First Serve, Second Serve, or Double Fault before selecting Shot Type. """
+        if self.is_player1_serving:
+            serve_options = ["First Serve", "Second Serve"] if result == "Won" else ["First Serve", "Second Serve", "Double Fault"]
+        else:
+            serve_options = ["First Serve", "Second Serve", "Double Fault"] if result == "Won" else ["First Serve", "Second Serve"]
+
         popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
 
-        for option in options:
-            btn = Button(text=option, on_press=lambda btn, option=option: self.update_score(option, result))
+        for serve in serve_options:
+            btn = Button(
+                text=serve, 
+                on_press=lambda btn, serve=serve: self.update_score(serve, "Double Fault", result) if serve == "Double Fault" else self.show_shot_type_prompt(serve, result)
+            )
             popup_layout.add_widget(btn)
 
-        self.popup = Popup(title="Select Point Type", content=popup_layout, size_hint=(0.5, 0.5))
+        self.popup = Popup(title="Select Serve Type", content=popup_layout, size_hint=(0.5, 0.5))
         self.popup.open()
 
-    def update_score(self, point_type, result):
-        """ Updates the score and stats based on the selected point type and result. """
+    def show_shot_type_prompt(self, serve, result):
+        """ Ask for Shot Type after Serve selection. """
         
-        self.history.append((
-            self.player_score,
-            self.opponent_score,
-            self.game_score[:],  # Copy list
-            self.set_score[:],  # Copy list
-            self.tiebreaker_active,
-            {k: v[:] for k, v in self.stats.items()}  # Deep copy dictionary
-        ))
-        if result == "Lost" and point_type == "Double Fault":
-            reason = "Double Fault"  # Mark as a double fault loss
-        else:
-            reason = None  
+        # Close previous popup
+        self.popup.dismiss()
 
-        # Update stats (track for opponent if it's a double fault)
-        if point_type == "Double Fault":
-            if result == "Won":  # Player won the point → Opponent made a double fault
-                self.stats["Double Fault"][1] += 1  # Increase **opponent's** double fault count
-            elif  result == "Lost":  # Player won the point → Opponent made a double fault
-                self.stats["Double Fault"][0] += 1
-                self.stats["Double Fault"][1] += -1 #opponents count was going up as well without this line of code 
+        # 🔹 Determine valid shot types based on serve/receive situation
+        if self.is_player1_serving:
+            if result == "Won":
+                shot_types = ["Volley", "Winner", "Ace"]
+            else:
+                shot_types = ["Volley", "Winner", "Ace"]
         else:
-            self.stats[point_type][0 if result == "Won" else 1] += 1  # Update stats normally
+            if result == "Won":
+                shot_types = ["Volley", "Winner"]
+            else:
+                shot_types = ["Ace", "Volley", "Winner"]
 
+        popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
+
+        for shot in shot_types:
+            btn = Button(text=shot, on_press=lambda btn, shot=shot: self.update_score(serve, shot, result))
+            popup_layout.add_widget(btn)
+
+        self.popup = Popup(title="Select Shot Type", content=popup_layout, size_hint=(0.5, 0.5))
+        self.popup.open()
+
+    def update_score(self, serve, point_type, result):
+        """ Updates the score and stats based on serve type, shot type, and result. """
+
+        # Track serve stats
+        if serve == "First Serve":
+            self.stats["First Serve Won" if result == "Won" else "First Serve Lost"][0 if self.is_player1_serving else 1] += 1
+        elif serve == "Second Serve":
+            self.stats["Second Serve Won" if result == "Won" else "Second Serve Lost"][0 if self.is_player1_serving else 1] += 1
+        elif serve == "Double Fault":
+            self.stats["Double Fault"][0 if self.is_player1_serving else 1] += 1
+
+        # Track shot type
+        if point_type != "Double Fault":
+            self.stats[point_type][0 if result == "Won" else 1] += 1  
+
+        # Store previous game score before updating
+        prev_game_score = self.game_score[:]
 
         # Update score
         self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active, self.stats = update_score(
-            self.player_score, self.opponent_score, self.game_score, self.set_score, result, self.tiebreaker_active, reason, self.stats
+            self.player_score, self.opponent_score, self.game_score, self.set_score, result, self.tiebreaker_active, None, self.stats
         )
+
+        # 🔹 Switch server if a full game was won/lost
+        if self.game_score != prev_game_score and not self.tiebreaker_active:  
+            self.is_player1_serving = not self.is_player1_serving  
 
         # Update UI
-        self.score_label.text = get_score_text(self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active)
-        self.live_stats_label.text = self.get_live_stats_text()  # Update live stats
+        self.score_label.text = self.get_score_display()
+        self.live_stats_label.text = self.get_live_stats_text()
         self.popup.dismiss()
 
-        # Handle tiebreaker
-        if self.tiebreaker_active:
-            self.show_tiebreaker_prompt()
-
-    def show_tiebreaker_prompt(self):
-        """ Handles tiebreaker UI. """
-        self.tiebreaker_popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
-
-        self.tiebreaker_label = Label(text=f"Tiebreaker Score: {self.player_score} - {self.opponent_score}")
-        self.tiebreaker_popup_layout.add_widget(self.tiebreaker_label)
-
-        player_btn = Button(text="Player Point", on_press=lambda btn: self.update_tiebreaker(True))
-        opponent_btn = Button(text="Opponent Point", on_press=lambda btn: self.update_tiebreaker(False))
-
-        self.tiebreaker_popup_layout.add_widget(player_btn)
-        self.tiebreaker_popup_layout.add_widget(opponent_btn)
-
-        self.tiebreaker_popup = Popup(title="Tiebreaker", content=self.tiebreaker_popup_layout, size_hint=(0.5, 0.3))
-        self.tiebreaker_popup.open()
-
-    def update_tiebreaker(self, player_won):
-        """ Updates tiebreaker score. """
-        self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active = update_score(
-            self.player_score, self.opponent_score, self.game_score, self.set_score, "Won" if player_won else "Lost", self.tiebreaker_active
-        )
-        self.score_label.text = get_score_text(self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active)
-
-        self.tiebreaker_label.text = f"Tiebreaker Score: {self.player_score} - {self.opponent_score}"
-
-        if not self.tiebreaker_active:  
-            self.tiebreaker_popup.dismiss()
 
     def generate_graph(self, instance):
         """ Generates the score progression graph. """
@@ -131,17 +156,15 @@ class TennisScoreLayout(Screen):
     def go_to_stats_page(self, instance):
         """ Navigates to the stats page and passes updated stats. """
         stats_screen = self.manager.get_screen("stats")
-        computed_stats = collect_stats(self.stats)  # Compute stats before passing
-        stats_screen.update_stats(computed_stats)  
+        stats_screen.update_stats(self.stats)  # Pass stats directly
         self.manager.current = "stats"
 
     def get_live_stats_text(self):
         """ Returns formatted text displaying live stats summary. """
         return (
-            f"Volley: {self.stats['Volley'][0]} | {self.stats['Volley'][1]}    "
-            f"Winner: {self.stats['Winner'][0]} | {self.stats['Winner'][1]}    "
-            f"Ace: {self.stats['Ace'][0]} | {self.stats['Ace'][1]}    "
-            f"Double Fault: {self.stats['Double Fault'][0]} | {self.stats['Double Fault'][1]}"
+            f"First Serve Won: {self.stats['First Serve Won'][0]} | {self.stats['First Serve Won'][1]}    "
+            f"Second Serve Won: {self.stats['Second Serve Won'][0]} | {self.stats['Second Serve Won'][1]}    "
+            f"Double Faults: {self.stats['Double Fault'][0]} | {self.stats['Double Fault'][1]}"
         )
 
     def undo_last_action(self, instance):
@@ -162,8 +185,3 @@ class TennisScoreLayout(Screen):
         """ Generates the score progression graph. """
         generate_graph()
 
-    def go_to_stats_page(self, instance):
-        """ Navigates to the stats page and passes updated stats. """
-        stats_screen = self.manager.get_screen("stats")
-        stats_screen.update_stats(self.stats)  # Pass stats to the stats page
-        self.manager.current = "stats"

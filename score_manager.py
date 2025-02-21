@@ -1,6 +1,6 @@
 def update_score(player_score, opponent_score, game_score, set_score, result, tiebreaker_active, reason=None, stats=None):
-    if stats is None:
-        stats = {"Aces": [0, 0], "Winners": [0, 0], "Double Fault": [0, 0], "Volleys Won": [0, 0]}
+    if stats is None:  # Only reset stats if it's completely empty
+        stats = {"Ace": [0, 0], "Winner": [0, 0], "Double Fault": [0, 0], "Volley": [0, 0]}
 
     if result == "Won":  
         player_score, opponent_score, game_score, set_score, tiebreaker_active = calculate_tennis_score(
@@ -13,7 +13,8 @@ def update_score(player_score, opponent_score, game_score, set_score, result, ti
 
         # Check if the loss was due to a double fault
         if reason == "Double Fault":
-            stats["Double Fault"][1] += 1  # Increase opponent's double fault count
+            if "Double Fault" in stats:  # Ensure key exists before updating
+                stats["Double Fault"][1] += 1  
 
     return player_score, opponent_score, game_score, set_score, tiebreaker_active, stats
 
@@ -27,11 +28,14 @@ def calculate_tennis_score(player, opponent, game_score, set_score, is_player, t
         player += 1  # Increment tiebreaker score for the selected player
 
         if player >= 7 and (player - opponent) >= 2:  # Win by 2 rule
-            set_score[0 if is_player else 1] += 1  # Award the set
+            set_score[0 if is_player else 1] += 1  # Start new set at 1-0
             game_score = [0, 0]  # Reset game scores
-            player, opponent = 0, 0  # Reset points
+            player, opponent = 0, 0  # Reset point scores
             tiebreaker_active = False  # End tiebreaker
+
         return player, opponent, game_score, set_score, tiebreaker_active
+
+
 
     # Normal point progression
     if isinstance(player, int) and player < 40:

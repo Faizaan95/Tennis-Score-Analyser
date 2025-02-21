@@ -25,30 +25,44 @@ class StatsPage(Screen):
         self.add_widget(self.layout)
 
     def update_stats(self, stats):
-        """ Updates the stats display with advanced statistics calculations. """
-        total_points_won = sum([stats[key][0] for key in stats if key != "Double Fault"])  # Exclude double faults
-        total_points_lost = sum([stats[key][1] for key in stats]) + stats["Double Fault"][0]  # Only add double faults to lost points
+        print(f"RECEIVED IN STATS PAGE: {stats}")  # Debugging print
+
+        if not stats:  # If stats is empty, print warning
+            print("WARNING: stats is empty!")
+        """ Ensures all required stats are available before displaying """
+        
+        # Ensure all keys exist in stats
+        default_stats = {
+            "Ace": [0, 0],
+            "Winner": [0, 0],
+            "Double Fault": [0, 0],
+            "Volley": [0, 0]
+        }
+        
+        for key in default_stats:
+            if key not in stats:
+                stats[key] = default_stats[key]  # Fill missing keys with default values
+
+        total_points_won = sum([stats[key][0] for key in stats if key != "Double Fault"])
+        total_points_lost = sum([stats[key][1] for key in stats]) + stats["Double Fault"][0]
         total_points_played = total_points_won + total_points_lost
 
-        # Avoid division by zero
         win_percentage = (total_points_won / total_points_played * 100) if total_points_played > 0 else 0
         ace_percentage = (stats["Ace"][0] / total_points_won * 100) if total_points_won > 0 else 0
         winner_percentage = (stats["Winner"][0] / total_points_won * 100) if total_points_won > 0 else 0
         double_fault_percentage = (stats["Double Fault"][0] / total_points_played * 100) if total_points_played > 0 else 0
 
-        stats_text = (
-            f"🏆 **Match Statistics:**\n\n"
-            f"🎾 **Total Points Won:** {total_points_won}\n"
-            f"❌ **Total Points Lost:** {total_points_lost}\n"
-            f"📊 **Win Percentage:** {win_percentage:.2f}%\n\n"
-            f"🔥 **Aces:** {stats['Ace'][0]} ({ace_percentage:.2f}%)\n"
-            f"🎯 **Winners:** {stats['Winner'][0]} ({winner_percentage:.2f}%)\n"
-            f"⚠️ **Double Faults:** {stats['Double Fault'][0]} ({double_fault_percentage:.2f}%)\n\n"
-            f"🏓 **Volleys Won:** {stats['Volley'][0]}\n"
-            f"🏓 **Volleys Lost:** {stats['Volley'][1]}\n"
+        self.stats_label.text = (
+            f"Match Statistics:\n\n"
+            f"Total Points Won: {total_points_won}\n"
+            f"Total Points Lost: {total_points_lost}\n"
+            f"Win Percentage: {win_percentage:.2f}%\n\n"
+            f"Aces: {stats['Ace'][0]} ({ace_percentage:.2f}%)\n"
+            f"Winners: {stats['Winner'][0]} ({winner_percentage:.2f}%)\n"
+            f"Double Faults: {stats['Double Fault'][0]} ({double_fault_percentage:.2f}%)\n\n"
+            f"Volleys Won: {stats['Volley'][0]}\n"
+            f"Volleys Lost: {stats['Volley'][1]}\n"
         )
-
-        self.stats_label.text = stats_text
 
 
     def save_as_image(self, instance):
