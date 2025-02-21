@@ -15,10 +15,11 @@ class TennisScoreLayout(Screen):
         # Variables
         self.player_score = 0
         self.opponent_score = 0
-        self.game_score = [0, 0]  # [Player Games, Opponent Games]
-        self.set_score = [0, 0]  # [Player Sets, Opponent Sets]
+        self.game_score = [0, 0]
+        self.set_score = [0, 0]
         self.tiebreaker_active = False
         self.is_player1_serving = True  # Player 1 starts as the server
+        self.selected_serve = None  # Store selected serve type
 
         # Track advanced stats
         self.stats = {
@@ -28,10 +29,10 @@ class TennisScoreLayout(Screen):
             "Second Serve Aces": [0, 0],
             "First Serve Volleys": [0, 0],
             "Second Serve Volleys": [0, 0],
-            "Double Faults": [0, 0]  # Stays independent
+            "Double Faults": [0, 0]
         }
         
-        self.history = []  # Stores multiple past states for undo actions
+        self.history = []
 
         # Layout
         main_layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
@@ -52,7 +53,7 @@ class TennisScoreLayout(Screen):
 
         # Live stats label
         self.live_stats_label = Label(text=self.get_live_stats_text(), font_size=20, size_hint=(1, 0.1))
-        main_layout.add_widget(self.live_stats_label)  # Added live stats at the bottom
+        main_layout.add_widget(self.live_stats_label)
 
         self.add_widget(main_layout)
 
@@ -73,25 +74,39 @@ class TennisScoreLayout(Screen):
     def show_serve_prompt(self, result):
         """ Ask for First Serve, Second Serve, or Double Fault before selecting Shot Type. """
         if self.is_player1_serving:
+            # Player 1 serving
             serve_options = ["First Serve", "Second Serve"] if result == "Won" else ["First Serve", "Second Serve", "Double Fault"]
         else:
+            # Player 2 serving (Player 1's perspective)
             serve_options = ["First Serve", "Second Serve", "Double Fault"] if result == "Won" else ["First Serve", "Second Serve"]
 
         popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
 
         for serve in serve_options:
             btn = Button(
-                text=serve, 
-                on_press=lambda btn, serve=serve: self.update_score(serve, "Double Fault", result) if serve == "Double Fault" else self.show_shot_type_prompt(serve, result)
+                text=serve,
+                on_press=lambda btn, serve=serve: self.update_score(serve, "Double Fault", result) if serve == "Double Fault" else self.show_shot_type_prompt(serve, result, btn)
+
             )
             popup_layout.add_widget(btn)
 
         self.popup = Popup(title="Select Serve Type", content=popup_layout, size_hint=(0.5, 0.5))
         self.popup.open()
 
-    def show_shot_type_prompt(self, serve, result):
+
+    def process_serve_selection(self, serve, result):
+        """ Store serve type and proceed to shot selection or award point for double fault. """
+        self.selected_serve = serve
+        self.popup.dismiss()
+
+        if serve == "Double Fault":
+            self.update_score(serve, "Double Fault", result)
+        else:
+            self.show_shot_type_prompt(result)
+
+    def show_shot_type_prompt(self, serve, result, *_):
         """ Ask for Shot Type after Serve selection. """
-        
+
         # Close previous popup
         self.popup.dismiss()
 
@@ -116,20 +131,21 @@ class TennisScoreLayout(Screen):
         self.popup = Popup(title="Select Shot Type", content=popup_layout, size_hint=(0.5, 0.5))
         self.popup.open()
 
+
     def update_score(self, serve, point_type, result):
         """ Updates the score and stats based on serve type, shot type, and result. """
 
-        # Track serve stats
-        if serve == "First Serve":
-            self.stats["First Serve Won" if result == "Won" else "First Serve Lost"][0 if self.is_player1_serving else 1] += 1
-        elif serve == "Second Serve":
-            self.stats["Second Serve Won" if result == "Won" else "Second Serve Lost"][0 if self.is_player1_serving else 1] += 1
-        elif serve == "Double Fault":
-            self.stats["Double Fault"][0 if self.is_player1_serving else 1] += 1
-
-        # Track shot type
-        if point_type != "Double Fault":
-            self.stats[point_type][0 if result == "Won" else 1] += 1  
+        # Only track double faults when the player who served loses the point
+        if serve == "Double Fault":
+            if result == "Lost":  # Player 1 double faulted
+                self.stats["Double Faults"][0 if self.is_player1_serving else 1] += 1
+            # If Player 1 wins because Player 2 double faulted, don't increase Player 1's count
+        
+        else:
+            # Track serve-based shot stats
+            key = f"{serve} {point_type}s"  # e.g., "First Serve Winners", "Second Serve Aces"
+            if key in self.stats:
+                self.stats[key][0 if result == "Won" else 1] += 1  
 
         # Store previous game score before updating
         prev_game_score = self.game_score[:]
@@ -148,7 +164,6 @@ class TennisScoreLayout(Screen):
         self.live_stats_label.text = self.get_live_stats_text()
         self.popup.dismiss()
 
-
     def generate_graph(self, instance):
         """ Generates the score progression graph. """
         generate_graph()
@@ -156,16 +171,17 @@ class TennisScoreLayout(Screen):
     def go_to_stats_page(self, instance):
         """ Navigates to the stats page and passes updated stats. """
         stats_screen = self.manager.get_screen("stats")
-        stats_screen.update_stats(self.stats)  # Pass stats directly
+        stats_screen.update_stats(self.stats)
         self.manager.current = "stats"
 
     def get_live_stats_text(self):
         """ Returns formatted text displaying live stats summary. """
         return (
-            f"First Serve Won: {self.stats['First Serve Won'][0]} | {self.stats['First Serve Won'][1]}    "
-            f"Second Serve Won: {self.stats['Second Serve Won'][0]} | {self.stats['Second Serve Won'][1]}    "
-            f"Double Faults: {self.stats['Double Fault'][0]} | {self.stats['Double Fault'][1]}"
+            f"First Serve Winners: {self.stats['First Serve Winners'][0]} | {self.stats['First Serve Winners'][1]}    "
+            f"Second Serve Winners: {self.stats['Second Serve Winners'][0]} | {self.stats['Second Serve Winners'][1]}    "
+            f"Double Faults: {self.stats['Double Faults'][0]} | {self.stats['Double Faults'][1]}"
         )
+
 
     def undo_last_action(self, instance):
         if self.history:  # Ensure there's a previous state to revert to
