@@ -105,31 +105,31 @@ class TennisScoreLayout(Screen):
             self.show_shot_type_prompt(result)
 
     def show_shot_type_prompt(self, serve, result, *_):
-        """ Ask for Shot Type after Serve selection. """
+            """ Ask for Shot Type after Serve selection. """
 
-        # Close previous popup
-        self.popup.dismiss()
+            # Close previous popup
+            self.popup.dismiss()
 
-        # 🔹 Determine valid shot types based on serve/receive situation
-        if self.is_player1_serving:
-            if result == "Won":
-                shot_types = ["Volley", "Winner", "Ace"]
+            # 🔹 Determine valid shot types based on serve/receive situation
+            if self.is_player1_serving:
+                if result == "Won":
+                    shot_types = ["Volley", "Winner", "Ace"]
+                else:
+                    shot_types = ["Volley", "Winner", "Ace"]
             else:
-                shot_types = ["Volley", "Winner", "Ace"]
-        else:
-            if result == "Won":
-                shot_types = ["Volley", "Winner"]
-            else:
-                shot_types = ["Ace", "Volley", "Winner"]
+                if result == "Won":
+                    shot_types = ["Volley", "Winner"]
+                else:
+                    shot_types = ["Ace", "Volley", "Winner"]
 
-        popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
+            popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
 
-        for shot in shot_types:
-            btn = Button(text=shot, on_press=lambda btn, shot=shot: self.update_score(serve, shot, result))
-            popup_layout.add_widget(btn)
+            for shot in shot_types:
+                btn = Button(text=shot, on_press=lambda btn, shot=shot: self.update_score(serve, shot, result))
+                popup_layout.add_widget(btn)
 
-        self.popup = Popup(title="Select Shot Type", content=popup_layout, size_hint=(0.5, 0.5))
-        self.popup.open()
+            self.popup = Popup(title="Select Shot Type", content=popup_layout, size_hint=(0.5, 0.5))
+            self.popup.open()
 
 
     def update_score(self, serve, point_type, result):
