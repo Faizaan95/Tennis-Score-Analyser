@@ -62,7 +62,7 @@ class TennisScoreLayout(Screen):
         server_dot_p1 = "• " if self.is_player1_serving else ""
         server_dot_p2 = "• " if not self.is_player1_serving else ""
 
-        return (f"{server_dot_p1}Player 1: {self.player_score} - {self.opponent_score} {server_dot_p2}\n"
+        return (f"{server_dot_p1}Player 1: {self.player_score} - Opponent: {self.opponent_score} {server_dot_p2}\n"
                 f"Games: {self.game_score[0]} - {self.game_score[1]}\n"
                 f"Sets: {self.set_score[0]} - {self.set_score[1]}")
 
