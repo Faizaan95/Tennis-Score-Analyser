@@ -4,7 +4,7 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.screenmanager import Screen
 from score_manager import update_score, get_score_text
-from graph_generator import generate_graph
+from end_match import End_Match
 from stats_generator import collect_stats
 
 # Main screen
@@ -47,7 +47,7 @@ class TennisScoreLayout(Screen):
         self.button_layout.add_widget(Button(text="Lost", on_press=lambda btn: self.show_serve_prompt("Lost")))
         self.button_layout.add_widget(Button(text="Switch Server", on_press=self.switch_server))
         self.button_layout.add_widget(Button(text="Generate Stats", on_press=self.go_to_stats_page))
-        self.button_layout.add_widget(Button(text="End Match", on_press=self.generate_graph))
+        self.button_layout.add_widget(Button(text="End Match", on_press=self.End_Match))
         
         main_layout.add_widget(self.button_layout)
 
@@ -164,9 +164,7 @@ class TennisScoreLayout(Screen):
         self.live_stats_label.text = self.get_live_stats_text()
         self.popup.dismiss()
 
-    def generate_graph(self, instance):
-        """ Generates the score progression graph. """
-        generate_graph()
+    
 
     def go_to_stats_page(self, instance):
         """ Navigates to the stats page and passes updated stats. """
@@ -197,7 +195,7 @@ class TennisScoreLayout(Screen):
             # Update UI after undo
             self.score_label.text = get_score_text(self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active)
 
-    def generate_graph(self, instance):
+    def End_Match(self, instance):
         """ Generates the score progression graph. """
-        generate_graph()
+        End_Match()
 
