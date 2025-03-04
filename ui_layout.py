@@ -6,6 +6,7 @@ from kivy.uix.screenmanager import Screen
 from score_manager import update_score, get_score_text
 from end_match import End_Match
 from stats_generator import collect_stats
+from serve_manager import show_serve_prompt,switch_server
 
 # Main screen
 class TennisScoreLayout(Screen):
@@ -43,9 +44,9 @@ class TennisScoreLayout(Screen):
 
         # Buttons layout
         self.button_layout = BoxLayout(orientation="horizontal", size_hint=(1, 0.2))
-        self.button_layout.add_widget(Button(text="Won", on_press=lambda btn: self.show_serve_prompt("Won")))
-        self.button_layout.add_widget(Button(text="Lost", on_press=lambda btn: self.show_serve_prompt("Lost")))
-        self.button_layout.add_widget(Button(text="Switch Server", on_press=self.switch_server))
+        self.button_layout.add_widget(Button(text="Won", on_press=lambda btn: show_serve_prompt(self, "Won")))  # ✅ Fixed
+        self.button_layout.add_widget(Button(text="Lost", on_press=lambda btn: show_serve_prompt(self, "Lost")))  # ✅ Fixed
+        self.button_layout.add_widget(Button(text="Switch Server", on_press=lambda btn: switch_server(self, btn)))  # ✅ Call the external function
         self.button_layout.add_widget(Button(text="Generate Stats", on_press=self.go_to_stats_page))
         self.button_layout.add_widget(Button(text="End Match", on_press=self.End_Match))
         
@@ -66,70 +67,8 @@ class TennisScoreLayout(Screen):
                 f"Games: {self.game_score[0]} - {self.game_score[1]}\n"
                 f"Sets: {self.set_score[0]} - {self.set_score[1]}")
 
-    def switch_server(self, instance):
-        """ Manually switch the server. """
-        self.is_player1_serving = not self.is_player1_serving
-        self.score_label.text = self.get_score_display()
+    
 
-    def show_serve_prompt(self, result):
-        """ Ask for First Serve, Second Serve, or Double Fault before selecting Shot Type. """
-        if self.is_player1_serving:
-            # Player 1 serving
-            serve_options = ["First Serve", "Second Serve"] if result == "Won" else ["First Serve", "Second Serve", "Double Fault"]
-        else:
-            # Player 2 serving (Player 1's perspective)
-            serve_options = ["First Serve", "Second Serve", "Double Fault"] if result == "Won" else ["First Serve", "Second Serve"]
-
-        popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
-
-        for serve in serve_options:
-            btn = Button(
-                text=serve,
-                on_press=lambda btn, serve=serve: self.update_score(serve, "Double Fault", result) if serve == "Double Fault" else self.show_shot_type_prompt(serve, result, btn)
-
-            )
-            popup_layout.add_widget(btn)
-
-        self.popup = Popup(title="Select Serve Type", content=popup_layout, size_hint=(0.5, 0.5))
-        self.popup.open()
-
-
-    def process_serve_selection(self, serve, result):
-        """ Store serve type and proceed to shot selection or award point for double fault. """
-        self.selected_serve = serve
-        self.popup.dismiss()
-
-        if serve == "Double Fault":
-            self.update_score(serve, "Double Fault", result)
-        else:
-            self.show_shot_type_prompt(result)
-
-    def show_shot_type_prompt(self, serve, result, *_):
-            """ Ask for Shot Type after Serve selection. """
-
-            # Close previous popup
-            self.popup.dismiss()
-
-            # 🔹 Determine valid shot types based on serve/receive situation
-            if self.is_player1_serving:
-                if result == "Won":
-                    shot_types = ["Volley", "Winner", "Ace"]
-                else:
-                    shot_types = ["Volley", "Winner", "Ace"]
-            else:
-                if result == "Won":
-                    shot_types = ["Volley", "Winner"]
-                else:
-                    shot_types = ["Ace", "Volley", "Winner"]
-
-            popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
-
-            for shot in shot_types:
-                btn = Button(text=shot, on_press=lambda btn, shot=shot: self.update_score(serve, shot, result))
-                popup_layout.add_widget(btn)
-
-            self.popup = Popup(title="Select Shot Type", content=popup_layout, size_hint=(0.5, 0.5))
-            self.popup.open()
 
 
     def update_score(self, serve, point_type, result):
