@@ -1,3 +1,14 @@
+import logging
+
+# Configure logging (creates a log file for errors)
+logging.basicConfig(
+    filename="app_errors.log",
+    level=logging.ERROR,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+
+
 def update_score(player_score, opponent_score, game_score, set_score, result, tiebreaker_active, reason=None, stats=None):
     if stats is None:  # Only reset stats if it's completely empty
         stats = {"Ace": [0, 0], "Winner": [0, 0], "Double Fault": [0, 0], "Volley": [0, 0]}
@@ -18,6 +29,39 @@ def update_score(player_score, opponent_score, game_score, set_score, result, ti
 
     return player_score, opponent_score, game_score, set_score, tiebreaker_active, stats
 
+def process_score_update(instance, serve, point_type, result):
+    """ Processes score updates and calls the core score update logic. """
+
+    # Only track double faults when the player who served loses the point
+    if serve == "Double Fault" and result == "Lost":
+        instance.stats["Double Faults"][0 if instance.is_player1_serving else 1] += 1
+    else:
+        key = f"{serve} {point_type}s"  # Example: "First Serve Winners"
+        if key in instance.stats:
+            instance.stats[key][0 if result == "Won" else 1] += 1  
+
+    # Store previous game score before updating
+    prev_game_score = instance.game_score[:]
+
+    # Call `update_score()` from score_manager.py
+    instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.tiebreaker_active, instance.stats = update_score(
+        instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, result, instance.tiebreaker_active, None, instance.stats
+    )
+
+    # Switch server if a full game was won/lost
+    if instance.game_score != prev_game_score and not instance.tiebreaker_active:
+        instance.is_player1_serving = not instance.is_player1_serving  
+
+    # Update UI elements
+    instance.score_label.text = instance.get_score_display()
+    instance.live_stats_label.text = instance.get_live_stats_text()
+
+    # Close any open popups safely
+    try:
+        if hasattr(instance, 'popup') and instance.popup:
+            instance.popup.dismiss()
+    except Exception:
+        pass  # Prevents errors if popup dismissal fails
 
 
 def calculate_tennis_score(player, opponent, game_score, set_score, is_player, tiebreaker_active):

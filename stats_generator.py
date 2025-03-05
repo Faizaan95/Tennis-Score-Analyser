@@ -4,6 +4,15 @@ from kivy.core.window import Window
 from kivy.core.image import Image as CoreImage
 from reportlab.pdfgen import canvas
 from kivy.utils import platform
+import logging
+
+# Configure logging (creates a log file for errors)
+logging.basicConfig(
+    filename="app_errors.log",
+    level=logging.ERROR,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 # Import Android-specific modules only if running on Android
 if platform == "android":

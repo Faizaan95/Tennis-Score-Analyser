@@ -3,6 +3,15 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.screenmanager import Screen
 from stats_generator import generate_stats_image, generate_stats_pdf, share_file
+import logging
+
+# Configure logging (creates a log file for errors)
+logging.basicConfig(
+    filename="app_errors.log",
+    level=logging.ERROR,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 class StatsPage(Screen):
     def __init__(self, **kwargs):

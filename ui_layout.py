@@ -3,10 +3,19 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.screenmanager import Screen
-from score_manager import update_score, get_score_text
+from score_manager import process_score_update, get_score_text
 from end_match import End_Match
 from stats_generator import collect_stats
 from serve_manager import show_serve_prompt,switch_server
+import logging
+
+# Configure logging (creates a log file for errors)
+logging.basicConfig(
+    filename="app_errors.log",
+    level=logging.ERROR,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 # Main screen
 class TennisScoreLayout(Screen):
@@ -70,38 +79,6 @@ class TennisScoreLayout(Screen):
     
 
 
-
-    def update_score(self, serve, point_type, result):
-        """ Updates the score and stats based on serve type, shot type, and result. """
-
-        # Only track double faults when the player who served loses the point
-        if serve == "Double Fault":
-            if result == "Lost":  # Player 1 double faulted
-                self.stats["Double Faults"][0 if self.is_player1_serving else 1] += 1
-            # If Player 1 wins because Player 2 double faulted, don't increase Player 1's count
-        
-        else:
-            # Track serve-based shot stats
-            key = f"{serve} {point_type}s"  # e.g., "First Serve Winners", "Second Serve Aces"
-            if key in self.stats:
-                self.stats[key][0 if result == "Won" else 1] += 1  
-
-        # Store previous game score before updating
-        prev_game_score = self.game_score[:]
-
-        # Update score
-        self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active, self.stats = update_score(
-            self.player_score, self.opponent_score, self.game_score, self.set_score, result, self.tiebreaker_active, None, self.stats
-        )
-
-        # 🔹 Switch server if a full game was won/lost
-        if self.game_score != prev_game_score and not self.tiebreaker_active:  
-            self.is_player1_serving = not self.is_player1_serving  
-
-        # Update UI
-        self.score_label.text = self.get_score_display()
-        self.live_stats_label.text = self.get_live_stats_text()
-        self.popup.dismiss()
 
     
 
