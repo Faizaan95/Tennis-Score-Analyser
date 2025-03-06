@@ -8,6 +8,8 @@ from end_match import End_Match
 from stats_generator import collect_stats
 from serve_manager import show_serve_prompt,switch_server
 import logging
+from score_manager import get_score_display  # ✅ Import the function
+
 
 # Configure logging (creates a log file for errors)
 logging.basicConfig(
@@ -30,6 +32,7 @@ class TennisScoreLayout(Screen):
         self.tiebreaker_active = False
         self.is_player1_serving = True  # Player 1 starts as the server
         self.selected_serve = None  # Store selected serve type
+        
 
         # Track advanced stats
         self.stats = {
@@ -48,7 +51,10 @@ class TennisScoreLayout(Screen):
         main_layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
 
         # Score display with server indicator
-        self.score_label = Label(text=self.get_score_display(), font_size=24)
+        self.score_label = Label(
+            text=get_score_display(self.player_score, self.opponent_score, self.game_score, self.set_score, self.is_player1_serving),
+            font_size=24
+        )
         main_layout.add_widget(self.score_label)
 
         # Buttons layout
@@ -66,18 +72,6 @@ class TennisScoreLayout(Screen):
         main_layout.add_widget(self.live_stats_label)
 
         self.add_widget(main_layout)
-
-    def get_score_display(self):
-        """ Returns formatted score text with server indicator. """
-        server_dot_p1 = "• " if self.is_player1_serving else ""
-        server_dot_p2 = "• " if not self.is_player1_serving else ""
-
-        return (f"{server_dot_p1}Player 1: {self.player_score} - Opponent: {self.opponent_score} {server_dot_p2}\n"
-                f"Games: {self.game_score[0]} - {self.game_score[1]}\n"
-                f"Sets: {self.set_score[0]} - {self.set_score[1]}")
-
-    
-
 
 
     

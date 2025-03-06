@@ -1,5 +1,7 @@
 import logging
 
+
+
 # Configure logging (creates a log file for errors)
 logging.basicConfig(
     filename="app_errors.log",
@@ -53,7 +55,9 @@ def process_score_update(instance, serve, point_type, result):
         instance.is_player1_serving = not instance.is_player1_serving  
 
     # Update UI elements
-    instance.score_label.text = instance.get_score_display()
+    instance.score_label.text = get_score_display(
+    instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.is_player1_serving
+    )
     instance.live_stats_label.text = instance.get_live_stats_text()
 
     # Close any open popups safely
@@ -120,3 +124,13 @@ def get_score_text(player_score, opponent_score, game_score, set_score, tiebreak
     if tiebreaker_active:
         return f"Tiebreaker: {player_score} - {opponent_score}\nSets: {set_score[0]} - {set_score[1]}"
     return f"Score: {player_score} - {opponent_score}\nGames: {game_score[0]} - {game_score[1]}\nSets: {set_score[0]} - {set_score[1]}"
+
+
+def get_score_display(player_score, opponent_score, game_score, set_score, is_player1_serving):
+    """ Returns formatted score text with server indicator. """
+    server_dot_p1 = "• " if is_player1_serving else ""
+    server_dot_p2 = "• " if not is_player1_serving else ""
+
+    return (f"{server_dot_p1}Player 1: {player_score} - Opponent: {opponent_score} {server_dot_p2}\n"
+            f"Games: {game_score[0]} - {game_score[1]}\n"
+            f"Sets: {set_score[0]} - {set_score[1]}")
