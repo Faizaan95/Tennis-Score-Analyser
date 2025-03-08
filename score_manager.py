@@ -34,6 +34,18 @@ def update_score(player_score, opponent_score, game_score, set_score, result, ti
 def process_score_update(instance, serve, point_type, result):
     """ Processes score updates and calls the core score update logic. """
 
+       # 🔹 Save current game state before making changes (for Undo)
+    instance.history.append((
+        instance.player_score,
+        instance.opponent_score,
+        instance.game_score[:],  # Copy list to prevent reference issues
+        instance.set_score[:],
+        instance.tiebreaker_active,
+        instance.stats.copy(),  # Copy dictionary
+        instance.is_player1_serving
+    ))
+    
+    
     # Only track double faults when the player who served loses the point
     if serve == "Double Fault" and result == "Lost":
         instance.stats["Double Faults"][0 if instance.is_player1_serving else 1] += 1
@@ -53,6 +65,11 @@ def process_score_update(instance, serve, point_type, result):
     # Switch server if a full game was won/lost
     if instance.game_score != prev_game_score and not instance.tiebreaker_active:
         instance.is_player1_serving = not instance.is_player1_serving  
+        
+    # ✅ Only switch server when a new game is won, NOT on Undo
+    if instance.game_score != prev_game_score and not instance.tiebreaker_active:
+        instance.is_player1_serving = not instance.is_player1_serving  
+
 
     # Update UI elements
     instance.score_label.text = get_score_display(
@@ -134,3 +151,34 @@ def get_score_display(player_score, opponent_score, game_score, set_score, is_pl
     return (f"{server_dot_p1}Player 1: {player_score} - Opponent: {opponent_score} {server_dot_p2}\n"
             f"Games: {game_score[0]} - {game_score[1]}\n"
             f"Sets: {set_score[0]} - {set_score[1]}")
+
+
+def undo_last_action(instance):
+    """ Reverts the last recorded game state. """
+    try:
+        print("🔄 Undo button pressed!")  # Debugging message
+
+        if instance.history:
+            print(f"📜 History before undo: {instance.history}")  # Show history before undo
+
+            (
+                instance.player_score,
+                instance.opponent_score,
+                instance.game_score,
+                instance.set_score,
+                instance.tiebreaker_active,
+                instance.stats,
+                instance.is_player1_serving
+            ) = instance.history.pop()  # Remove and restore the last state
+
+            print(f"✅ Undo successful! New state: {instance.player_score}, {instance.opponent_score}, {instance.game_score}, {instance.set_score}")  # Debugging message
+
+            # Update UI after undo
+            instance.score_label.text = get_score_display(
+                instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.is_player1_serving
+            )
+        else:
+            print("⚠ No history to undo!")  # Debugging message
+    except Exception as e:
+        logging.error(f"Error in undo_last_action: {e}")
+        print(f"⚠ Error: {e}")  # Debugging

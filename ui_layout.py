@@ -3,12 +3,11 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.screenmanager import Screen
-from score_manager import process_score_update, get_score_text
 from end_match import End_Match
-from stats_generator import collect_stats
 from serve_manager import show_serve_prompt,switch_server
 import logging
 from score_manager import get_score_display  # ✅ Import the function
+from score_manager import undo_last_action
 
 
 # Configure logging (creates a log file for errors)
@@ -61,9 +60,11 @@ class TennisScoreLayout(Screen):
         self.button_layout = BoxLayout(orientation="horizontal", size_hint=(1, 0.2))
         self.button_layout.add_widget(Button(text="Won", on_press=lambda btn: show_serve_prompt(self, "Won")))  # ✅ Fixed
         self.button_layout.add_widget(Button(text="Lost", on_press=lambda btn: show_serve_prompt(self, "Lost")))  # ✅ Fixed
+        self.button_layout.add_widget(Button(text="Undo", on_press=lambda btn: undo_last_action(self)))
         self.button_layout.add_widget(Button(text="Switch Server", on_press=lambda btn: switch_server(self, btn)))  # ✅ Call the external function
         self.button_layout.add_widget(Button(text="Generate Stats", on_press=self.go_to_stats_page))
         self.button_layout.add_widget(Button(text="End Match", on_press=self.End_Match))
+        
         
         main_layout.add_widget(self.button_layout)
 
@@ -91,19 +92,7 @@ class TennisScoreLayout(Screen):
         )
 
 
-    def undo_last_action(self, instance):
-        if self.history:  # Ensure there's a previous state to revert to
-            (
-                self.player_score,
-                self.opponent_score,
-                self.game_score,
-                self.set_score,
-                self.tiebreaker_active,
-                self.stats
-            ) = self.history.pop()  # Remove and restore the last state
 
-            # Update UI after undo
-            self.score_label.text = get_score_text(self.player_score, self.opponent_score, self.game_score, self.set_score, self.tiebreaker_active)
 
     def End_Match(self, instance):
         """ Generates the score progression graph. """

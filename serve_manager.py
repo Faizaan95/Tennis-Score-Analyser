@@ -88,7 +88,7 @@ def show_shot_type_prompt(instance, serve, result):
 
         # Determine valid shot types based on serve/receive situation
         if instance.is_player1_serving:
-            shot_types = ["Volley", "Winner", "Ace"] if result == "Won" else ["Volley", "Winner", "Ace"]
+            shot_types = ["Volley", "Winner", "Ace"] if result == "Won" else ["Volley", "Winner"]
         else:
             shot_types = ["Volley", "Winner"] if result == "Won" else ["Ace", "Volley", "Winner"]
 
