@@ -3,7 +3,7 @@ from kivy.uix.button import Button
 from kivy.uix.popup import Popup
 from score_manager import process_score_update  # ✅ Correct import
 import logging
-
+from score_manager import get_score_display  # Ensure this is imported
 # Configure logging (creates a log file for errors)
 logging.basicConfig(
     filename="app_errors.log",
@@ -20,7 +20,13 @@ def switch_server(instance, _):
         assert instance is not None, "Instance is None in switch_server()"
 
         instance.is_player1_serving = not instance.is_player1_serving
-        instance.score_label.text = instance.get_score_display()
+        instance.score_label.text = get_score_display(
+            instance.player_score, 
+            instance.opponent_score, 
+            instance.game_score, 
+            instance.set_score, 
+            instance.is_player1_serving
+        )
     
     except Exception as e:
         logging.error(f"Error in switch_server: {e}")
@@ -34,9 +40,12 @@ def show_serve_prompt(instance, result):
         assert instance is not None, "Instance is None in show_serve_prompt()"
         assert result in ["Won", "Lost"], f"Invalid result: {result}"
 
-        serve_options = ["First Serve", "Second Serve"]
-        if result == "Lost":
-            serve_options.append("Double Fault")
+        if instance.is_player1_serving:
+            # Player 1 serving
+            serve_options = ["First Serve", "Second Serve"] if result == "Won" else ["First Serve", "Second Serve", "Double Fault"]
+        else:
+            # Player 2 serving (Player 1's perspective)
+            serve_options = ["First Serve", "Second Serve", "Double Fault"] if result == "Won" else ["First Serve", "Second Serve"]
 
         popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
 
@@ -88,9 +97,15 @@ def show_shot_type_prompt(instance, serve, result):
 
         # Determine valid shot types based on serve/receive situation
         if instance.is_player1_serving:
-            shot_types = ["Volley", "Winner", "Ace"] if result == "Won" else ["Volley", "Winner"]
+            if result == "Won":
+                shot_types = ["Volley", "Winner", "Ace"]
+            else:
+                shot_types = ["Volley", "Winner", "Ace"]
         else:
-            shot_types = ["Volley", "Winner"] if result == "Won" else ["Ace", "Volley", "Winner"]
+            if result == "Won":
+                shot_types = ["Volley", "Winner"]
+            else:
+                        shot_types = ["Ace", "Volley", "Winner"]
 
         popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
 
