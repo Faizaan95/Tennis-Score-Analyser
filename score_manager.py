@@ -66,10 +66,7 @@ def process_score_update(instance, serve, point_type, result):
     if instance.game_score != prev_game_score and not instance.tiebreaker_active:
         instance.is_player1_serving = not instance.is_player1_serving  
         
-    # ✅ Only switch server when a new game is won, NOT on Undo
-    if instance.game_score != prev_game_score and not instance.tiebreaker_active:
-        instance.is_player1_serving = not instance.is_player1_serving  
-
+    
 
     # Update UI elements
     instance.score_label.text = get_score_display(
