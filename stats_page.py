@@ -69,9 +69,6 @@ class StatsPage(Screen):
 
         # Avoid division by zero
         win_percentage = (total_points_won / total_points_played * 100) if total_points_played > 0 else 0
-        ace_percentage = ((stats["First Serve Aces"][0] + stats["Second Serve Aces"][0]) / total_points_won * 100) if total_points_won > 0 else 0
-        winner_percentage = ((stats["First Serve Winners"][0] + stats["Second Serve Winners"][0]) / total_points_won * 100) if total_points_won > 0 else 0
-        double_fault_percentage = (stats["Double Faults"][0] / total_points_played * 100) if total_points_played > 0 else 0
 
         # Update UI with formatted stats
         self.stats_label.text = (
@@ -89,7 +86,7 @@ class StatsPage(Screen):
             f"Volleys (First Serve): {stats['First Serve Volleys'][0]} | {stats['First Serve Volleys'][1]}\n"
             f"Volleys (Second Serve): {stats['Second Serve Volleys'][0]} | {stats['Second Serve Volleys'][1]}\n\n"
             
-            f"Double Faults: {stats['Double Faults'][0]} ({double_fault_percentage:.2f}%)\n"
+            f"Double Faults: {stats['Double Faults'][0]}"
         )
 
     def save_as_image(self, instance):

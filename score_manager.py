@@ -1,5 +1,5 @@
 import logging
-
+import copy  # ✅ Import deepcopy
 
 
 # Configure logging (creates a log file for errors)
@@ -34,18 +34,17 @@ def update_score(player_score, opponent_score, game_score, set_score, result, ti
 def process_score_update(instance, serve, point_type, result):
     """ Processes score updates and calls the core score update logic. """
 
-       # 🔹 Save current game state before making changes (for Undo)
+    # 🔹 Use deepcopy() to fully copy stats (fixes the undo issue!)
     instance.history.append((
         instance.player_score,
         instance.opponent_score,
-        instance.game_score[:],  # Copy list to prevent reference issues
-        instance.set_score[:],
+        instance.game_score[:],  # ✅ Copy list to prevent reference issues
+        instance.set_score[:],  
         instance.tiebreaker_active,
-        instance.stats.copy(),  # Copy dictionary
+        copy.deepcopy(instance.stats),  # ✅ Use deepcopy() for stats
         instance.is_player1_serving
     ))
-    
-    
+
     # Only track double faults when the player who served loses the point
     if serve == "Double Fault" and result == "Lost":
         instance.stats["Double Faults"][0 if instance.is_player1_serving else 1] += 1
@@ -57,7 +56,7 @@ def process_score_update(instance, serve, point_type, result):
     # Store previous game score before updating
     prev_game_score = instance.game_score[:]
 
-    # Call `update_score()` from score_manager.py
+    # Call `update_score()`
     instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.tiebreaker_active, instance.stats = update_score(
         instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, result, instance.tiebreaker_active, None, instance.stats
     )
@@ -65,12 +64,10 @@ def process_score_update(instance, serve, point_type, result):
     # Switch server if a full game was won/lost
     if instance.game_score != prev_game_score and not instance.tiebreaker_active:
         instance.is_player1_serving = not instance.is_player1_serving  
-        
-    
 
     # Update UI elements
     instance.score_label.text = get_score_display(
-    instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.is_player1_serving
+        instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.is_player1_serving
     )
     instance.live_stats_label.text = instance.get_live_stats_text()
 
@@ -80,7 +77,6 @@ def process_score_update(instance, serve, point_type, result):
             instance.popup.dismiss()
     except Exception:
         pass  # Prevents errors if popup dismissal fails
-
 
 def calculate_tennis_score(player, opponent, game_score, set_score, is_player, tiebreaker_active):
     tennis_points = [0, 15, 30, 40]
@@ -153,10 +149,10 @@ def get_score_display(player_score, opponent_score, game_score, set_score, is_pl
 def undo_last_action(instance):
     """ Reverts the last recorded game state. """
     try:
-        print("🔄 Undo button pressed!")  # Debugging message
+        print("🔄 Undo button pressed!")  
 
         if instance.history:
-            print(f"📜 History before undo: {instance.history}")  # Show history before undo
+            print(f"📜 History before undo: {instance.history}")  
 
             (
                 instance.player_score,
@@ -164,18 +160,30 @@ def undo_last_action(instance):
                 instance.game_score,
                 instance.set_score,
                 instance.tiebreaker_active,
-                instance.stats,
+                instance.stats,  # ✅ Now fully restored thanks to deepcopy()
                 instance.is_player1_serving
-            ) = instance.history.pop()  # Remove and restore the last state
+            ) = instance.history.pop()
 
-            print(f"✅ Undo successful! New state: {instance.player_score}, {instance.opponent_score}, {instance.game_score}, {instance.set_score}")  # Debugging message
+            print(f"✅ Undo successful! New state: {instance.player_score}, {instance.opponent_score}, {instance.game_score}, {instance.set_score}")  
 
-            # Update UI after undo
+            # Update Score Display
             instance.score_label.text = get_score_display(
                 instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.is_player1_serving
             )
+
+            # ✅ Ensure stats are updated properly in the stats page
+            stats_screen = instance.manager.get_screen("stats")
+            if stats_screen:
+                print("🔄 Calling update_stats() now!")  
+                stats_screen.update_stats(instance.stats)  # ✅ Stats will now update correctly!
+                print("✅ Stats page updated successfully after undo.")
+
+            else:
+                print("⚠ ERROR: Could not find stats screen!")
+
         else:
-            print("⚠ No history to undo!")  # Debugging message
+            print("⚠ No history to undo!")  
+
     except Exception as e:
         logging.error(f"Error in undo_last_action: {e}")
-        print(f"⚠ Error: {e}")  # Debugging
+        print(f"⚠ Error: {e}")  
