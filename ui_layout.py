@@ -62,7 +62,7 @@ class TennisScoreLayout(Screen):
         self.button_layout.add_widget(Button(text="Lost", on_press=lambda btn: show_serve_prompt(self, "Lost")))  # ✅ Fixed
         self.button_layout.add_widget(Button(text="Undo", on_press=lambda btn: undo_last_action(self)))
         self.button_layout.add_widget(Button(text="Switch Server", on_press=lambda btn: switch_server(self, btn)))  # ✅ Call the external function
-        self.button_layout.add_widget(Button(text="Generate Stats", on_press=self.go_to_stats_page))
+        self.button_layout.add_widget(Button(text="Match Stats", on_press=self.go_to_stats_page))
         self.button_layout.add_widget(Button(text="End Match", on_press=self.End_Match))
         
         
@@ -88,10 +88,17 @@ class TennisScoreLayout(Screen):
         return (
             f"First Serve Winners: {self.stats['First Serve Winners'][0]} | {self.stats['First Serve Winners'][1]}    "
             f"Second Serve Winners: {self.stats['Second Serve Winners'][0]} | {self.stats['Second Serve Winners'][1]}    "
-            f"Double Faults: {self.stats['Double Faults'][0]} | {self.stats['Double Faults'][1]}"
+            f"Double Faults: {self.stats['Double Faults'][0]} "
         )
 
 
+    def update_live_stats(self):
+        """Updates the live stats label dynamically."""
+        self.live_stats_label.text = (
+            f"First Serve Winners: {self.stats['First Serve Winners'][0]} | {self.stats['First Serve Winners'][1]}    "
+            f"Second Serve Winners: {self.stats['Second Serve Winners'][0]} | {self.stats['Second Serve Winners'][1]}    "
+            f"Double Faults: {self.stats['Double Faults'][0]} "
+        )
 
 
     def End_Match(self, instance):

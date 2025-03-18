@@ -56,7 +56,7 @@ def show_serve_prompt(instance, result):
             )
             popup_layout.add_widget(btn)
 
-        instance.popup = Popup(title="Select Serve Type", content=popup_layout, size_hint=(0.5, 0.5))
+        instance.popup = Popup(title="On which serve did the point occur?", content=popup_layout, size_hint=(0.5, 0.5))
         instance.popup.open()
 
     except Exception as e:
@@ -113,7 +113,7 @@ def show_shot_type_prompt(instance, serve, result):
             btn = Button(text=shot, on_press=lambda btn, shot=shot: process_score_update(instance, serve, shot, result))  # ✅ Fixed
             popup_layout.add_widget(btn)
 
-        instance.popup = Popup(title="Select Shot Type", content=popup_layout, size_hint=(0.5, 0.5))
+        instance.popup = Popup(title="How did the player win the point?", content=popup_layout, size_hint=(0.5, 0.5))
         instance.popup.open()
 
     except Exception as e:

@@ -69,7 +69,8 @@ def process_score_update(instance, serve, point_type, result):
     instance.score_label.text = get_score_display(
         instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.is_player1_serving
     )
-    instance.live_stats_label.text = instance.get_live_stats_text()
+    instance.update_live_stats()  # Refresh the live stats after updating the score
+
 
     # Close any open popups safely
     try:
@@ -170,6 +171,9 @@ def undo_last_action(instance):
             instance.score_label.text = get_score_display(
                 instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.is_player1_serving
             )
+            
+            instance.update_live_stats()  # Refresh the live stats after undoing
+
 
             # ✅ Ensure stats are updated properly in the stats page
             stats_screen = instance.manager.get_screen("stats")
