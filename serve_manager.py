@@ -100,7 +100,7 @@ def show_shot_type_prompt(instance, serve, result):
             if result == "Won":
                 shot_types = ["Volley", "Winner", "Ace"]
             else:
-                shot_types = ["Volley", "Winner", "Ace"]
+                shot_types = ["Volley", "Winner"]
         else:
             if result == "Won":
                 shot_types = ["Volley", "Winner"]

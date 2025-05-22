@@ -3,11 +3,12 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.screenmanager import Screen
-from end_match import End_Match
+from end_match import End_Match as end_match_popup
 from serve_manager import show_serve_prompt,switch_server
 import logging
 from score_manager import get_score_display  # ✅ Import the function
 from score_manager import undo_last_action
+
 
 
 # Configure logging (creates a log file for errors)
@@ -63,7 +64,8 @@ class TennisScoreLayout(Screen):
         self.button_layout.add_widget(Button(text="Undo", on_press=lambda btn: undo_last_action(self)))
         self.button_layout.add_widget(Button(text="Switch Server", on_press=lambda btn: switch_server(self, btn)))  # ✅ Call the external function
         self.button_layout.add_widget(Button(text="Match Stats", on_press=self.go_to_stats_page))
-        self.button_layout.add_widget(Button(text="End Match", on_press=self.End_Match))
+        self.button_layout.add_widget(Button(text="End Match", on_press=lambda btn: end_match_popup(self)))
+
         
         
         main_layout.add_widget(self.button_layout)
@@ -85,23 +87,37 @@ class TennisScoreLayout(Screen):
 
     def get_live_stats_text(self):
         """ Returns formatted text displaying live stats summary. """
-        return (
-            f"First Serve Winners: {self.stats['First Serve Winners'][0]} | {self.stats['First Serve Winners'][1]}    "
-            f"Second Serve Winners: {self.stats['Second Serve Winners'][0]} | {self.stats['Second Serve Winners'][1]}    "
-            f"Double Faults: {self.stats['Double Faults'][0]} "
+        
+        total_points_won = (
+            self.stats['First Serve Winners'][0] + self.stats['Second Serve Winners'][0] +
+            self.stats['First Serve Aces'][0] + self.stats['Second Serve Aces'][0] +
+            self.stats['First Serve Volleys'][0] + self.stats['Second Serve Volleys'][0]
         )
+
+        return (
+            
+            f"Double Faults: {self.stats['Double Faults'][0]}    "
+            f"Total Points Won: {total_points_won}"
+        )
+
 
 
     def update_live_stats(self):
         """Updates the live stats label dynamically."""
+        
+        total_points_won = (
+            self.stats['First Serve Winners'][0] + self.stats['Second Serve Winners'][0] +
+            self.stats['First Serve Aces'][0] + self.stats['Second Serve Aces'][0] +
+            self.stats['First Serve Volleys'][0] + self.stats['Second Serve Volleys'][0]
+        )
+        
         self.live_stats_label.text = (
-            f"First Serve Winners: {self.stats['First Serve Winners'][0]} | {self.stats['First Serve Winners'][1]}    "
-            f"Second Serve Winners: {self.stats['Second Serve Winners'][0]} | {self.stats['Second Serve Winners'][1]}    "
-            f"Double Faults: {self.stats['Double Faults'][0]} "
+            f"Double Faults: {self.stats['Double Faults'][0]}    "
+            f"Total Points Won: {total_points_won}"
         )
 
 
     def End_Match(self, instance):
-        """ Generates the score progression graph. """
+        
         End_Match()
 
