@@ -9,11 +9,11 @@ class HomeScreen(Screen):
         layout = BoxLayout(orientation='vertical', spacing=20, padding=40)
 
         layout.add_widget(Button(
-            text="🎾 Standard Match",
+            text=" Standard Match",
             on_press=self.go_to_standard_match
         ))
         layout.add_widget(Button(
-            text="🔥 Tiebreak Match",
+            text=" Tiebreak Match",
             on_press=self.go_to_tiebreak_match
         ))
 
