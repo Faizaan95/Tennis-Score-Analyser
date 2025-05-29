@@ -4,7 +4,7 @@ from kivy.uix.button import Button
 from kivy.uix.screenmanager import Screen
 from stats_generator import generate_stats_image, generate_stats_pdf, share_file
 import logging
-
+from stats_generator import collect_stats
 # Configure logging (creates a log file for errors)
 logging.basicConfig(
     filename="app_errors.log",
@@ -16,6 +16,7 @@ logging.basicConfig(
 class StatsPage(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.previous_screen = "main"  # default fallback
         self.layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
 
         # Stats display label
@@ -33,7 +34,9 @@ class StatsPage(Screen):
         self.layout.add_widget(button_layout)
         self.add_widget(self.layout)
 
-    def update_stats(self, stats):
+    def update_stats(self, raw_stats):
+        
+        stats = collect_stats(raw_stats) 
         print(f"RECEIVED IN STATS PAGE: {stats}")  # Debugging print
 
         if not stats:
@@ -73,21 +76,22 @@ class StatsPage(Screen):
         # Update UI with formatted stats
         self.stats_label.text = (
             f"Match Statistics:\n\n"
-            f"Total Points Won: {total_points_won}\n"
-            f"Total Points Lost: {total_points_lost}\n"
-            f"Win Percentage: {win_percentage:.2f}%\n\n"
-            
-            f"Aces (First Serve): {stats['First Serve Aces'][0]} | {stats['First Serve Aces'][1]}\n"
-            f"Aces (Second Serve): {stats['Second Serve Aces'][0]} | {stats['Second Serve Aces'][1]}\n"
-            
-            f"Winners (First Serve): {stats['First Serve Winners'][0]} | {stats['First Serve Winners'][1]}\n"
-            f"Winners (Second Serve): {stats['Second Serve Winners'][0]} | {stats['Second Serve Winners'][1]}\n"
-            
-            f"Volleys (First Serve): {stats['First Serve Volleys'][0]} | {stats['First Serve Volleys'][1]}\n"
-            f"Volleys (Second Serve): {stats['Second Serve Volleys'][0]} | {stats['Second Serve Volleys'][1]}\n\n"
-            
+            f"Total Points Won: {stats['Total Points Won']}\n"
+            f"Total Points Lost: {stats['Total Points Lost']}\n"
+            f"Win Percentage: {stats['Win Percentage']:.2f}%\n\n"
+
+            f"Aces (First Serve): {stats['Aces (First Serve)'][0]} | {stats['Aces (First Serve)'][1]}\n"
+            f"Aces (Second Serve): {stats['Aces (Second Serve)'][0]} | {stats['Aces (Second Serve)'][1]}\n"
+
+            f"Winners (First Serve): {stats['Winners (First Serve)'][0]} | {stats['Winners (First Serve)'][1]}\n"
+            f"Winners (Second Serve): {stats['Winners (Second Serve)'][0]} | {stats['Winners (Second Serve)'][1]}\n"
+
+            f"Volleys (First Serve): {stats['Volleys (First Serve)'][0]} | {stats['Volleys (First Serve)'][1]}\n"
+            f"Volleys (Second Serve): {stats['Volleys (Second Serve)'][0]} | {stats['Volleys (Second Serve)'][1]}\n\n"
+
             f"Double Faults: {stats['Double Faults'][0]}"
         )
+
 
     def save_as_image(self, instance):
         img_path = generate_stats_image(self.stats_label.text)
@@ -106,4 +110,4 @@ class StatsPage(Screen):
         share_file(pdf_path)
 
     def go_back(self, instance):
-        self.manager.current = "main"
+        self.manager.current = self.previous_screen

@@ -49,6 +49,8 @@ class TennisScoreLayout(Screen):
 
         # Layout
         main_layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
+        
+        
 
         # Score display with server indicator
         self.score_label = Label(
@@ -56,6 +58,12 @@ class TennisScoreLayout(Screen):
             font_size=24
         )
         main_layout.add_widget(self.score_label)
+        
+        main_layout.add_widget(Button(
+            text="Back to Home",
+            size_hint=(1, 0.1),
+            on_press=lambda btn: self.go_to_home()
+        ))
 
         # Buttons layout
         self.button_layout = BoxLayout(orientation="horizontal", size_hint=(1, 0.2))
@@ -80,8 +88,8 @@ class TennisScoreLayout(Screen):
     
 
     def go_to_stats_page(self, instance):
-        """ Navigates to the stats page and passes updated stats. """
         stats_screen = self.manager.get_screen("stats")
+        stats_screen.previous_screen = "main"
         stats_screen.update_stats(self.stats)
         self.manager.current = "stats"
 
@@ -117,7 +125,7 @@ class TennisScoreLayout(Screen):
         )
 
 
-    def End_Match(self, instance):
-        
-        End_Match()
+    
 
+    def go_to_home(self):
+            self.manager.current = "home"

@@ -50,8 +50,11 @@ def process_score_update(instance, serve, point_type, result):
         instance.stats["Double Faults"][0 if instance.is_player1_serving else 1] += 1
     else:
         key = f"{serve} {point_type}s"  # Example: "First Serve Winners"
-        if key in instance.stats:
-            instance.stats[key][0 if result == "Won" else 1] += 1  
+        if key not in instance.stats:
+            instance.stats[key] = [0, 0]
+        instance.stats[key][0 if result == "Won" else 1] += 1
+
+    print(f"🏷️ Tracking key: {key}")
 
     # Store previous game score before updating
     prev_game_score = instance.game_score[:]
@@ -66,9 +69,16 @@ def process_score_update(instance, serve, point_type, result):
         instance.is_player1_serving = not instance.is_player1_serving  
 
     # Update UI elements
-    instance.score_label.text = get_score_display(
-        instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.is_player1_serving
-    )
+    # Prefer screen-defined score formatting if available
+    if hasattr(instance, 'get_score_text'):
+        instance.score_label.text = instance.get_score_text()
+    else:
+        instance.score_label.text = get_score_display(
+            instance.player_score, instance.opponent_score,
+            instance.game_score, instance.set_score,
+            instance.is_player1_serving
+        )
+
     instance.update_live_stats()  # Refresh the live stats after updating the score
 
 
@@ -168,9 +178,18 @@ def undo_last_action(instance):
             print(f"✅ Undo successful! New state: {instance.player_score}, {instance.opponent_score}, {instance.game_score}, {instance.set_score}")  
 
             # Update Score Display
-            instance.score_label.text = get_score_display(
-                instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.is_player1_serving
-            )
+            try:
+                # Let each screen define how to display score
+                if hasattr(instance, 'get_score_text'):
+                    instance.score_label.text = instance.get_score_text()
+                else:
+                    instance.score_label.text = get_score_display(
+                        instance.player_score, instance.opponent_score,
+                        instance.game_score, instance.set_score,
+                        instance.is_player1_serving
+                    )
+            except Exception as e:
+                logging.error(f"Error updating score display: {e}")
             
             instance.update_live_stats()  # Refresh the live stats after undoing
 

@@ -20,14 +20,19 @@ def switch_server(instance, _):
         assert instance is not None, "Instance is None in switch_server()"
 
         instance.is_player1_serving = not instance.is_player1_serving
-        instance.score_label.text = get_score_display(
-            instance.player_score, 
-            instance.opponent_score, 
-            instance.game_score, 
-            instance.set_score, 
-            instance.is_player1_serving
-        )
-    
+
+        # 🧠 Prefer custom screen formatting if available
+        if hasattr(instance, 'get_score_text'):
+            instance.score_label.text = instance.get_score_text()
+        else:
+            instance.score_label.text = get_score_display(
+                instance.player_score,
+                instance.opponent_score,
+                instance.game_score,
+                instance.set_score,
+                instance.is_player1_serving
+            )
+
     except Exception as e:
         logging.error(f"Error in switch_server: {e}")
         if DEBUG_MODE:
@@ -79,6 +84,8 @@ def process_serve_selection(instance, serve, result):
             process_score_update(instance, serve, "Double Fault", result)  # ✅ Fixed
         else:
             show_shot_type_prompt(instance, serve, result)
+            
+    
 
     except Exception as e:
         logging.error(f"Error in process_serve_selection: {e}")
