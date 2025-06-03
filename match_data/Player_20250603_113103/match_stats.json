@@ -1,0 +1,43 @@
+{
+    "player_score": 0,
+    "opponent_score": 0,
+    "game_score": [
+        0,
+        0
+    ],
+    "set_score": [
+        0,
+        0
+    ],
+    "stats": {
+        "First Serve Winners": [
+            0,
+            0
+        ],
+        "Second Serve Winners": [
+            0,
+            0
+        ],
+        "First Serve Aces": [
+            0,
+            0
+        ],
+        "Second Serve Aces": [
+            0,
+            0
+        ],
+        "First Serve Volleys": [
+            0,
+            0
+        ],
+        "Second Serve Volleys": [
+            0,
+            0
+        ],
+        "Double Faults": [
+            0,
+            0
+        ]
+    },
+    "timestamp": "2025-06-03 11:31:03"
+}
