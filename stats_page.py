@@ -2,7 +2,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.screenmanager import Screen
-from stats_generator import generate_stats_image, generate_stats_pdf, share_file
+from stats_generator import generate_stats_image, share_file
 import logging
 from stats_generator import collect_stats
 from score_manager import get_score_display
@@ -20,6 +20,8 @@ class StatsPage(Screen):
         super().__init__(**kwargs)
         self.previous_screen = "main"  # default fallback
         self.layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
+        
+        
 
         # Stats display label
         self.stats_label = Label(text="Stats will be displayed here.", font_size=24)
@@ -28,9 +30,6 @@ class StatsPage(Screen):
         # Buttons layout
         button_layout = BoxLayout(orientation="horizontal", size_hint=(1, 0.2))
         button_layout.add_widget(Button(text="Download Image", on_press=self.save_as_image))
-        button_layout.add_widget(Button(text="Download PDF", on_press=self.save_as_pdf))
-        button_layout.add_widget(Button(text="Share Image", on_press=self.share_as_image))
-        button_layout.add_widget(Button(text="Share PDF", on_press=self.share_as_pdf))
         button_layout.add_widget(Button(text="Back", on_press=self.go_back))
 
         self.layout.add_widget(button_layout)
@@ -41,18 +40,19 @@ class StatsPage(Screen):
         score_summary = data.get("score_summary", {})
 
         stats = collect_stats(match_stats)  # Compute derived stats
+        
+        self.is_player1_serving = False
 
         # Extract score data
         player_score = score_summary.get("player_score", 0)
         opponent_score = score_summary.get("opponent_score", 0)
         game_score = score_summary.get("game_score", [0, 0])
         set_score = score_summary.get("set_score", [0, 0])
-        tiebreak = score_summary.get("tiebreaker_active", False)
-        is_serving_p1 = score_summary.get("is_player1_serving", True)
+        is_serving_p1 = score_summary.get("is_player1_serving", False)
 
         # Format score
         score_text = get_score_display(
-            player_score, opponent_score, game_score, set_score, is_serving_p1
+            player_score, opponent_score, game_score, set_score, is_serving_p1, show_server=False
         )
 
         self.stats_label.text = (
@@ -80,17 +80,11 @@ class StatsPage(Screen):
         img_path = generate_stats_image(self.stats_label.text)
         print(f"Image saved at {img_path}")
 
-    def save_as_pdf(self, instance):
-        pdf_path = generate_stats_pdf(self.stats_label.text)
-        print(f"PDF saved at {pdf_path}")
 
     def share_as_image(self, instance):
         img_path = generate_stats_image(self.stats_label.text)
         share_file(img_path)
 
-    def share_as_pdf(self, instance):
-        pdf_path = generate_stats_pdf(self.stats_label.text)
-        share_file(pdf_path)
 
     def go_back(self, instance):
         self.manager.current = self.previous_screen

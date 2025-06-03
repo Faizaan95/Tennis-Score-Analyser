@@ -90,7 +90,6 @@ def finalize_match(instance, folder_name):
             "Double Faults": [0, 0]
         }
         instance.history.clear()
-        instance.score_label.text = "Match Ended. Start a new match!"
         instance.update_live_stats()
         instance.manager.current = "home"
         print("✅ Match reset and returned to home.")

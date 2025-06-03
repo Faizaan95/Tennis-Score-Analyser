@@ -1,5 +1,5 @@
 import os
-from share_utils import generate_stats_image, generate_stats_pdf, share_file
+from share_utils import generate_stats_image, share_file
 from kivy.core.image import Image as CoreImage
 import logging
 

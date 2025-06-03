@@ -8,17 +8,17 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-def update_score(player_score, opponent_score, game_score, set_score, result, tiebreaker_active, reason=None, stats=None):
+def update_score(player_score, opponent_score, game_score, set_score, result, tiebreaker_active, reason=None, stats=None, is_dedicated_tiebreaker=False):
     if stats is None:
         stats = {"Ace": [0, 0], "Winner": [0, 0], "Double Fault": [0, 0], "Volley": [0, 0]}
 
     if result == "Won":
         player_score, opponent_score, game_score, set_score, tiebreaker_active = calculate_tennis_score(
-            player_score, opponent_score, game_score, set_score, True, tiebreaker_active
+            player_score, opponent_score, game_score, set_score, True, tiebreaker_active, is_dedicated_tiebreaker
         )
     elif result == "Lost":
         opponent_score, player_score, game_score, set_score, tiebreaker_active = calculate_tennis_score(
-            opponent_score, player_score, game_score, set_score, False, tiebreaker_active
+            opponent_score, player_score, game_score, set_score, False, tiebreaker_active, is_dedicated_tiebreaker
         )
 
         if reason == "Double Fault":
@@ -30,6 +30,9 @@ def update_score(player_score, opponent_score, game_score, set_score, result, ti
 
 def process_score_update(instance, serve, point_type, result):
     """ Processes score updates and updates the stats page. """
+
+    # Check if this is a dedicated tiebreaker screen
+    is_dedicated_tiebreaker = hasattr(instance, 'name') and instance.name == 'tiebreak_match'
 
     # Backup for undo
     instance.history.append((
@@ -58,7 +61,7 @@ def process_score_update(instance, serve, point_type, result):
     # Score update
     instance.player_score, instance.opponent_score, instance.game_score, instance.set_score, instance.tiebreaker_active, instance.stats = update_score(
         instance.player_score, instance.opponent_score, instance.game_score, instance.set_score,
-        result, instance.tiebreaker_active, serve if point_type == "Double Fault" else None, instance.stats
+        result, instance.tiebreaker_active, serve if point_type == "Double Fault" else None, instance.stats, is_dedicated_tiebreaker
     )
 
     # Server switch logic
@@ -103,11 +106,17 @@ def process_score_update(instance, serve, point_type, result):
         pass
 
 
-def calculate_tennis_score(player, opponent, game_score, set_score, is_player, tiebreaker_active):
+def calculate_tennis_score(player, opponent, game_score, set_score, is_player, tiebreaker_active, is_dedicated_tiebreaker=False):
     tennis_points = [0, 15, 30, 40]
 
     if tiebreaker_active:
         player += 1
+        
+        # For dedicated tiebreaker screen, don't end the tiebreaker - just keep counting
+        if is_dedicated_tiebreaker:
+            return player, opponent, game_score, set_score, tiebreaker_active
+        
+        # For regular matches, end tiebreaker when someone reaches 7+ with 2+ point lead
         if player >= 7 and (player - opponent) >= 2:
             set_score[0 if is_player else 1] += 1
             game_score = [0, 0]
@@ -139,18 +148,18 @@ def calculate_tennis_score(player, opponent, game_score, set_score, is_player, t
     return player, opponent, game_score, set_score, tiebreaker_active
 
 
-def get_score_text(player_score, opponent_score, game_score, set_score, tiebreaker_active):
-    if tiebreaker_active:
-        return f"Tiebreaker: {player_score} - {opponent_score}\nSets: {set_score[0]} - {set_score[1]}"
-    return f"Score: {player_score} - {opponent_score}\nGames: {game_score[0]} - {game_score[1]}\nSets: {set_score[0]} - {set_score[1]}"
+def get_score_display(player_score, opponent_score, game_score, set_score, is_player1_serving, show_server=True):
+    if show_server:
+        server_dot_p1 = "• " if is_player1_serving else ""
+        server_dot_p2 = "• " if not is_player1_serving else ""
+    else:
+        server_dot_p1 = ""
+        server_dot_p2 = ""
 
-
-def get_score_display(player_score, opponent_score, game_score, set_score, is_player1_serving):
-    server_dot_p1 = "• " if is_player1_serving else ""
-    server_dot_p2 = "• " if not is_player1_serving else ""
     return (f"{server_dot_p1}Player 1: {player_score} - Opponent: {opponent_score} {server_dot_p2}\n"
             f"Games: {game_score[0]} - {game_score[1]}\n"
             f"Sets: {set_score[0]} - {set_score[1]}")
+
 
 
 def undo_last_action(instance):

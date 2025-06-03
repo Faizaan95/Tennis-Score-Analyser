@@ -80,6 +80,18 @@ class TiebreakMatchScreen(Screen):
         stats_screen.previous_screen = "tiebreak_match"
         stats_screen.update_stats(self.stats)
         self.manager.current = "stats"
+        
+        stats_screen.update_stats({
+        "match_stats": self.stats,
+        "score_summary": {
+            "player_score": self.player_score,
+            "opponent_score": self.opponent_score,
+            "game_score": self.game_score,
+            "set_score": self.set_score,
+            "tiebreaker_active": self.tiebreaker_active,
+            "is_player1_serving": self.is_player1_serving
+        }
+    })
 
 
     def get_live_stats_text(self):
