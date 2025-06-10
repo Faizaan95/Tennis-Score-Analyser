@@ -59,6 +59,7 @@ def show_serve_prompt(instance, result):
                 text=serve,
                 on_press=lambda btn, serve=serve: process_serve_selection(instance, serve, result)
             )
+
             popup_layout.add_widget(btn)
 
         instance.popup = Popup(title="On which serve did the point occur?", content=popup_layout, size_hint=(0.5, 0.5))
@@ -71,21 +72,16 @@ def show_serve_prompt(instance, result):
 
 
 def process_serve_selection(instance, serve, result):
-    """ Store serve type and proceed to shot selection or award point for double fault. """
+    """ Handles serve selection, routes to next stage. """
     try:
-        assert instance is not None, "Instance is None in process_serve_selection()"
-        assert serve is not None, "Serve type is None"
-        assert result in ["Won", "Lost"], f"Invalid result: {result}"
-
+        assert instance is not None and serve and result in ["Won", "Lost"]
         instance.selected_serve = serve
         instance.popup.dismiss()
 
         if serve == "Double Fault":
-            process_score_update(instance, serve, "Double Fault", result)  # ✅ Fixed
+            process_score_update(instance, serve, "Double Fault", result)
         else:
-            show_shot_type_prompt(instance, serve, result)
-            
-    
+            show_point_result_prompt(instance, serve, result)
 
     except Exception as e:
         logging.error(f"Error in process_serve_selection: {e}")
@@ -93,37 +89,90 @@ def process_serve_selection(instance, serve, result):
             print(f"⚠ Error in process_serve_selection: {e}")
 
 
-def show_shot_type_prompt(instance, serve, result):
-    """ Ask for Shot Type after Serve selection. """
+def show_point_result_prompt(instance, serve, result):
+    """ Prompt 2: How was the point won or lost. """
     try:
-        assert instance is not None, "Instance is None in show_shot_type_prompt()"
+        assert instance is not None, "Instance is None in show_point_result_prompt()"
         assert serve is not None, "Serve type is None"
         assert result in ["Won", "Lost"], f"Invalid result: {result}"
 
         instance.popup.dismiss()  # Close previous popup
 
-        # Determine valid shot types based on serve/receive situation
-        if instance.is_player1_serving:
-            if result == "Won":
-                shot_types = ["Volley", "Winner", "Ace"]
+        # Dynamic shot result options
+        if result == "Won":
+            if not instance.is_player1_serving:
+                # Player was returning, can't win with an Ace
+                options = ["Winner", "Opponent Error"]
             else:
-                shot_types = ["Volley", "Winner"]
+                options = ["Ace", "Winner", "Opponent Error"]
+            title = "How did the player win the point?"
+
         else:
-            if result == "Won":
-                shot_types = ["Volley", "Winner"]
-            else:
-                        shot_types = ["Ace", "Volley", "Winner"]
+            options = ["Winner", "Error"]
+            title = "How did the player lose the point?"
 
         popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
 
-        for shot in shot_types:
-            btn = Button(text=shot, on_press=lambda btn, shot=shot: process_score_update(instance, serve, shot, result))  # ✅ Fixed
+        for shot_type in options:
+            btn = Button(
+                text=shot_type,
+                on_press=lambda btn, shot_type=shot_type: process_shot_type_selection(instance, serve, shot_type, result)
+            )
             popup_layout.add_widget(btn)
 
-        instance.popup = Popup(title="How did the player win the point?", content=popup_layout, size_hint=(0.5, 0.5))
+        instance.popup = Popup(title=title, content=popup_layout, size_hint=(0.5, 0.5))
         instance.popup.open()
 
     except Exception as e:
-        logging.error(f"Error in show_shot_type_prompt: {e}")
+        logging.error(f"Error in show_point_result_prompt: {e}")
         if DEBUG_MODE:
-            print(f"⚠ Error in show_shot_type_prompt: {e}")
+            print(f"⚠ Error in show_point_result_prompt: {e}")
+
+
+
+def process_shot_type_selection(instance, serve, shot_type, result):
+    """ Decides whether to ask for detailed shot type, or finalize immediately (e.g. Ace). """
+    try:
+        instance.popup.dismiss()
+
+        if shot_type == "Ace" or shot_type == "Double Fault":
+            # Finalize directly
+            process_score_update(instance, serve, shot_type, result)
+        else:
+            # Ask for detailed shot type (Forehand, Backhand, etc.)
+            show_detailed_shot_prompt(instance, serve, shot_type, result)
+
+    except Exception as e:
+        logging.error(f"Error in process_shot_type_selection: {e}")
+        if DEBUG_MODE:
+            print(f"⚠ Error in process_shot_type_selection: {e}")
+
+
+def show_detailed_shot_prompt(instance, serve, shot_type, result):
+    """ Ask for the specific shot type used (forehand, backhand, etc). """
+    try:
+        shot_options = ["Forehand", "Backhand", "Volley", "Smash","Dropshot","Lob"]
+
+        popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
+
+        for detail in shot_options:
+            btn = Button(
+                text=detail,
+                on_press=lambda btn, detail=detail: process_score_update(instance, serve, f"{detail} {shot_type}", result)
+            )
+            popup_layout.add_widget(btn)
+
+        # Determine title dynamically
+        if result == "Lost" and shot_type == "Error":
+            title = "On which shot did the error occur?"
+        else:
+            title = "Which shot was used to win the point?" if result == "Won" else "Which shot beat the player?"
+
+        instance.popup = Popup(title=title, content=popup_layout, size_hint=(0.5, 0.5))
+        instance.popup.open()
+
+
+    except Exception as e:
+        logging.error(f"Error in show_detailed_shot_prompt: {e}")
+        if DEBUG_MODE:
+            print(f"⚠ Error in show_detailed_shot_prompt: {e}")

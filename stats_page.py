@@ -2,7 +2,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.screenmanager import Screen
-from stats_generator import generate_stats_image, share_file
+from stats_generator import generate_stats_image
 import logging
 from stats_generator import collect_stats
 from score_manager import get_score_display
@@ -66,24 +66,34 @@ class StatsPage(Screen):
             f"Aces (Second Serve): {stats['Aces (Second Serve)'][0]} | {stats['Aces (Second Serve)'][1]}\n"
 
             f"Winners (First Serve): {stats['Winners (First Serve)'][0]} | {stats['Winners (First Serve)'][1]}\n"
-            f"Winners (Second Serve): {stats['Winners (Second Serve)'][0]} | {stats['Winners (Second Serve)'][1]}\n"
+            f"Winners (Second Serve): {stats['Winners (Second Serve)'][0]} | {stats['Winners (Second Serve)'][1]}\n\n"
 
-            f"Volleys (First Serve): {stats['Volleys (First Serve)'][0]} | {stats['Volleys (First Serve)'][1]}\n"
-            f"Volleys (Second Serve): {stats['Volleys (Second Serve)'][0]} | {stats['Volleys (Second Serve)'][1]}\n\n"
+            f"Errors (Player): {match_stats.get('Errors', [0, 0])[0]}\n"
+            f"Opponent Winners: {match_stats.get('Opponent Winners', [0, 0])[1]}\n\n"
 
             f"Double Faults: {stats['Double Faults'][0]}"
         )
+        
+                # Optional breakdown
+        SHOW_BREAKDOWN = False
+
+        if SHOW_BREAKDOWN:
+            breakdown_text = "\nDetailed Breakdown:\n"
+            for key in sorted(match_stats.keys()):
+                if any(term in key for term in ["Forehand", "Backhand", "Volley", "Smash", "Dropshot", "Lob"]):
+                    breakdown_text += f"{key}: {match_stats[key][0]} | {match_stats[key][1]}\n"
+            self.stats_label.text += "\n" + breakdown_text
 
 
 
-    def save_as_image(self, instance):
-        img_path = generate_stats_image(self.stats_label.text)
-        print(f"Image saved at {img_path}")
 
+    def save_as_image(self, instance):  # Add 'instance' parameter
+        img_path = generate_stats_image(self.stats_label)  # or whatever your stats container is
+        if img_path:
+            print(f"Image saved at {img_path}")
+        else:
+            print("Failed to save image")
 
-    def share_as_image(self, instance):
-        img_path = generate_stats_image(self.stats_label.text)
-        share_file(img_path)
 
 
     def go_back(self, instance):

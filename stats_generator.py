@@ -1,5 +1,5 @@
 import os
-from share_utils import generate_stats_image, share_file
+from share_utils import generate_stats_image
 from kivy.core.image import Image as CoreImage
 import logging
 
@@ -14,58 +14,71 @@ logging.basicConfig(
 
 
 def collect_stats(match_stats):
-    """ Returns both basic and advanced tennis match stats. """
-    
     print(f"RECEIVED IN collect_stats(): {match_stats}")  
 
     if not match_stats:
         print("WARNING: match_stats is empty!")
 
-    # Ensure all keys exist in stats dictionary
-    default_stats = {
-        "First Serve Winners": [0, 0],
-        "Second Serve Winners": [0, 0],
-        "First Serve Aces": [0, 0],
-        "Second Serve Aces": [0, 0],
-        "First Serve Volleys": [0, 0],
-        "Second Serve Volleys": [0, 0],
-        "Double Faults": [0, 0]
-    }
-
-    for key in default_stats:
+    # Ensure essential aggregate keys exist
+    essential_keys = [
+        "Winners", "Errors", "Double Faults", "Opponent Errors", "Opponent Winners", "Aces"
+    ]
+    for key in essential_keys:
         if key not in match_stats:
-            match_stats[key] = default_stats[key]  # Fill missing keys with defaults
+            match_stats[key] = [0, 0]
 
-    # Calculate total points won/lost
+    # --- Aggregating First/Second Serve Winners ---
+    first_serve_winners = [0, 0]
+    second_serve_winners = [0, 0]
+    first_serve_volleys = [0, 0]
+    second_serve_volleys = [0, 0]
+    first_serve_aces = match_stats.get("First Serve Aces", [0, 0])
+    second_serve_aces = match_stats.get("Second Serve Aces", [0, 0])
+
+    for key, val in match_stats.items():
+        if key.startswith("First Serve") and "Winner" in key:
+            first_serve_winners[0] += val[0]
+            first_serve_winners[1] += val[1]
+        if key.startswith("Second Serve") and "Winner" in key:
+            second_serve_winners[0] += val[0]
+            second_serve_winners[1] += val[1]
+        if key.startswith("First Serve") and "Volley" in key:
+            first_serve_volleys[0] += val[0]
+            first_serve_volleys[1] += val[1]
+        if key.startswith("Second Serve") and "Volley" in key:
+            second_serve_volleys[0] += val[0]
+            second_serve_volleys[1] += val[1]
+
     total_points_won = (
-        match_stats["First Serve Winners"][0] + match_stats["Second Serve Winners"][0] +
-        match_stats["First Serve Aces"][0] + match_stats["Second Serve Aces"][0] +
-        match_stats["First Serve Volleys"][0] + match_stats["Second Serve Volleys"][0]
+        match_stats["Winners"][0] +
+        match_stats["Opponent Errors"][1] +
+        match_stats["Aces"][0]
     )
+
     total_points_lost = (
-        match_stats["First Serve Winners"][1] + match_stats["Second Serve Winners"][1] +
-        match_stats["First Serve Aces"][1] + match_stats["Second Serve Aces"][1] +
-        match_stats["First Serve Volleys"][1] + match_stats["Second Serve Volleys"][1]
-    ) + match_stats["Double Faults"][0]  # Double faults count as lost points
+        match_stats["Errors"][0] +
+        match_stats["Opponent Winners"][1] +
+        match_stats["Double Faults"][0]
+    )
 
     total_points_played = total_points_won + total_points_lost
 
-    # Avoid division by zero
-    win_percentage = (total_points_won / total_points_played * 100) if total_points_played > 0 else 0
-    ace_percentage = ((match_stats["First Serve Aces"][0] + match_stats["Second Serve Aces"][0]) / total_points_won * 100) if total_points_won > 0 else 0
-    winner_percentage = ((match_stats["First Serve Winners"][0] + match_stats["Second Serve Winners"][0]) / total_points_won * 100) if total_points_won > 0 else 0
-    double_fault_percentage = (match_stats["Double Faults"][0] / total_points_played * 100) if total_points_played > 0 else 0
+    # Percentages
+    win_percentage = (total_points_won / total_points_played * 100) if total_points_played else 0
+    ace_percentage = (match_stats["Aces"][0] / total_points_won * 100) if total_points_won else 0
+    winner_percentage = (match_stats["Winners"][0] / total_points_won * 100) if total_points_won else 0
+    double_fault_percentage = (match_stats["Double Faults"][0] / total_points_played * 100) if total_points_played else 0
 
-    stats = {
+    stats =  {
         "Total Points Won": total_points_won,
         "Total Points Lost": total_points_lost,
         "Win Percentage": round(win_percentage, 2),
-        "Aces (First Serve)": match_stats["First Serve Aces"],
-        "Aces (Second Serve)": match_stats["Second Serve Aces"],
-        "Winners (First Serve)": match_stats["First Serve Winners"],
-        "Winners (Second Serve)": match_stats["Second Serve Winners"],
-        "Volleys (First Serve)": match_stats["First Serve Volleys"],
-        "Volleys (Second Serve)": match_stats["Second Serve Volleys"],
+        "Aces (First Serve)": first_serve_aces,
+        "Aces (Second Serve)": second_serve_aces,
+        "Winners (First Serve)": first_serve_winners,
+        "Winners (Second Serve)": second_serve_winners,
+        "Volleys (First Serve)": first_serve_volleys,
+        "Volleys (Second Serve)": second_serve_volleys,
         "Double Faults": match_stats["Double Faults"],
         "Ace Percentage": round(ace_percentage, 2),
         "Winner Percentage": round(winner_percentage, 2),

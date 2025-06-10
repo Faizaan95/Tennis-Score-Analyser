@@ -5,34 +5,51 @@ from kivy.utils import platform
 import os
 import json
 from datetime import datetime
+from kivy.graphics import Color, Rectangle
 
-# Android-specific
-if platform == "android":
-    from androidstorage4kivy import SharedStorage
-    from jnius import autoclass
-    Intent = autoclass("android.content.Intent")
-    Uri = autoclass("android.net.Uri")
-    PythonActivity = autoclass("org.kivy.android.PythonActivity")
-else:
-    SharedStorage = None  # Prevents crashes on non-Android devices
-
-def generate_stats_image(stats_text):
-    img_path = "stats.png"
-    Window.screenshot(name=img_path)
-    print(f"Stats saved as {img_path}")
-    return img_path
+try:
+    from android.storage import primary_external_storage_path
+    ANDROID = True
+except ImportError:
+    ANDROID = False
 
 
-def share_file(file_path):
-    if platform == "android" and SharedStorage:
-        file_uri = SharedStorage().copy_to_shared(file_path)
-        intent = Intent(Intent.ACTION_SEND)
-        
-        intent.putExtra(Intent.EXTRA_STREAM, Uri.parse(file_uri))
-        chooser = Intent.createChooser(intent, "Share via")
-        PythonActivity.mActivity.startActivity(chooser)
+
+def generate_stats_image(stats_widget):
+    # 🕒 Timestamped filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # 📂 Choose output directory
+    if ANDROID:
+        downloads_dir = primary_external_storage_path() + "/Download"
     else:
-        print(f"Sharing not supported on this platform. File saved at {file_path}")
+        downloads_dir = "."  # Save to current directory on desktop
+
+    img_path = f"{downloads_dir}/stats_{timestamp}.png"
+
+    # 🖤 Add black background if not already present
+    if not hasattr(stats_widget, 'bg_rect'):
+        with stats_widget.canvas.before:
+            Color(0, 0, 0, 1)
+            stats_widget.bg_rect = Rectangle(pos=stats_widget.pos, size=stats_widget.size)
+
+    # 🧭 Update background position and size
+    stats_widget.bg_rect.pos = stats_widget.pos
+    stats_widget.bg_rect.size = stats_widget.size
+
+    try:
+        # 📸 Export widget to PNG
+        stats_widget.export_to_png(img_path)
+        print(f"✅ Stats image saved: {img_path}")
+        return img_path
+
+    except Exception as e:
+        print(f"❌ Error saving stats image: {e}")
+        return None
+
+
+
+
 
 def finalize_match_data(instance, match_name):
     try:
