@@ -1,9 +1,9 @@
-Match Summary - ok
-Date: 2025-06-10 21:22:20
+Match Summary - error
+Date: 2025-06-11 20:02:49
 
 Final Score:
   Player: 0
-  Opponent: 0
+  Opponent: 15
 
 Set Score: [0, 0]
 Game Score: [0, 0]
@@ -16,3 +16,10 @@ Statistics:
   First Serve Volleys: [0, 0]
   Second Serve Volleys: [0, 0]
   Double Faults: [0, 0]
+  Dropshot Errors: [1, 0]
+  Errors: [1, 0]
+  First Serve Dropshot Errors: [1, 0]
+  Winners: [0, 0]
+  Opponent Errors: [0, 0]
+  Opponent Winners: [0, 0]
+  Aces: [0, 0]

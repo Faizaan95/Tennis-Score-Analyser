@@ -7,6 +7,8 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.utils import platform
+import csv
+
 
 
 # Logging
@@ -34,8 +36,10 @@ def End_Match(instance):
     popup = Popup(title="Name the Match Folder", content=content, size_hint=(0.8, 0.4))
     popup.open()
 
+
+
 def finalize_match(instance, folder_name):
-    """ Finalizes match: saves JSON + TXT + optional share. """
+    """ Finalizes match: saves JSON + TXT + CSV (and optional Android share). """
     try:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         base_folder = f"match_data/{folder_name}_{timestamp}"
@@ -70,12 +74,20 @@ def finalize_match(instance, folder_name):
 
         print(f"✅ TXT Summary saved at {txt_path}")
 
-        # ✅ 3. Optional share (TXT file on Android)
-        if platform == "android":
-            share_file(txt_path, mime_type="text/plain")
-            # share_file(json_path, mime_type="application/json") if needed
+        # 🔹 3. Save CSV version of stats
+        csv_path = os.path.join(base_folder, "match_stats.csv")
+        with open(csv_path, "w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["Stat", "Player", "Opponent"])
+            for stat, values in instance.stats.items():
+                player_val = values[0] if isinstance(values, list) else values
+                opponent_val = values[1] if isinstance(values, list) else ""
+                writer.writerow([stat, player_val, opponent_val])
 
-        # ✅ 4. Reset match state
+        print(f"✅ CSV saved at {csv_path}")
+
+       
+        # ✅ 5. Reset match state
         instance.player_score = 0
         instance.opponent_score = 0
         instance.game_score = [0, 0]

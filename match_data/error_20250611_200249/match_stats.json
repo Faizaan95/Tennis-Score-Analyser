@@ -1,6 +1,6 @@
 {
     "player_score": 0,
-    "opponent_score": 0,
+    "opponent_score": 15,
     "game_score": [
         0,
         0
@@ -37,7 +37,35 @@
         "Double Faults": [
             0,
             0
+        ],
+        "Dropshot Errors": [
+            1,
+            0
+        ],
+        "Errors": [
+            1,
+            0
+        ],
+        "First Serve Dropshot Errors": [
+            1,
+            0
+        ],
+        "Winners": [
+            0,
+            0
+        ],
+        "Opponent Errors": [
+            0,
+            0
+        ],
+        "Opponent Winners": [
+            0,
+            0
+        ],
+        "Aces": [
+            0,
+            0
         ]
     },
-    "timestamp": "2025-06-10 21:22:20"
+    "timestamp": "2025-06-11 20:02:49"
 }

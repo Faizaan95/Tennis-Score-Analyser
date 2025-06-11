@@ -223,7 +223,11 @@ def update_match_statistics(instance, serve, point_type, result):
                 serve_key = f"{serve} {point_type}s"
                 if serve_key not in instance.stats:
                     instance.stats[serve_key] = [0, 0]
-                instance.stats[serve_key][0 if result == "Won" else 1] += 1
+                # Always track errors under player's column, even when result == "Lost"
+                if "Error" in point_type and result == "Lost":
+                    instance.stats[serve_key][0] += 1
+                else:
+                    instance.stats[serve_key][0 if result == "Won" else 1] += 1
 
                 if DEBUG_MODE:
                     print(f"📊 Tracked: {serve_key}")

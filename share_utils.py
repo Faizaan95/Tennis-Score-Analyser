@@ -54,9 +54,13 @@ def generate_stats_image(stats_widget):
 def finalize_match_data(instance, match_name):
     try:
         # 🔸 Step 1: Create folder in shared location (if Android)
-        base_dir = os.path.expanduser("~")
         folder_name = match_name.replace(" ", "_")
-        full_path = os.path.join(base_dir, "TennisMatches", folder_name)
+        if ANDROID:
+            base_dir = os.path.join(primary_external_storage_path(), "Download", "TennisMatches")
+        else:
+            base_dir = os.path.join(os.path.expanduser("~"), "TennisMatches")
+        full_path = os.path.join(base_dir, folder_name)
+
 
         os.makedirs(full_path, exist_ok=True)
 
@@ -72,7 +76,10 @@ def finalize_match_data(instance, match_name):
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
-        json_path = os.path.join(full_path, "match_data.json")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        json_filename = f"match_data_{timestamp}.json"
+        json_path = os.path.join(full_path, json_filename)
+
         with open(json_path, "w") as f:
             json.dump(data, f, indent=4)
 
