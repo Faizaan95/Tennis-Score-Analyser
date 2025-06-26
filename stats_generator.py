@@ -21,7 +21,7 @@ def collect_stats(match_stats):
 
     # Ensure essential aggregate keys exist
     essential_keys = [
-        "Winners", "Errors", "Double Faults", "Opponent Errors", "Opponent Winners", "Aces"
+        "Winners", "Errors", "Double Faults", "Aces"
     ]
     for key in essential_keys:
         if key not in match_stats:
@@ -32,6 +32,10 @@ def collect_stats(match_stats):
     second_serve_winners = [0, 0]
     first_serve_volleys = [0, 0]
     second_serve_volleys = [0, 0]
+    
+    # Get serves in directly from the existing stats (don't recalculate)
+    first_serves_in = match_stats.get("First Serves In", [0, 0])
+    second_serves_in = match_stats.get("Second Serves In", [0, 0])
     first_serve_aces = match_stats.get("First Serve Aces", [0, 0])
     second_serve_aces = match_stats.get("Second Serve Aces", [0, 0])
 
@@ -48,18 +52,33 @@ def collect_stats(match_stats):
         if key.startswith("Second Serve") and "Volley" in key:
             second_serve_volleys[0] += val[0]
             second_serve_volleys[1] += val[1]
+        # Removed the problematic serve counting logic
 
     total_points_won = (
         match_stats["Winners"][0] +
-        match_stats["Opponent Errors"][1] +
+        match_stats["Errors"][1] +
         match_stats["Aces"][0]
     )
+    
+    # Debug the total points calculation
+    print(f"DEBUG TOTAL POINTS WON:")
+    print(f"  Winners[0]: {match_stats['Winners'][0]}")
+    print(f"  Errors[1] (opponent errors): {match_stats['Errors'][1]}")
+    print(f"  Aces[0]: {match_stats['Aces'][0]}")
+    print(f"  TOTAL: {total_points_won}")
 
     total_points_lost = (
         match_stats["Errors"][0] +
-        match_stats["Opponent Winners"][1] +
+        match_stats["Winners"][1] +  # opponent winners now stored here
         match_stats["Double Faults"][0]
     )
+    
+    # Debug the total points lost calculation
+    print(f"DEBUG TOTAL POINTS LOST:")
+    print(f"  Errors[0] (player errors): {match_stats['Errors'][0]}")
+    print(f"  Winners[1] (opponent winners): {match_stats['Winners'][1]}")
+    print(f"  Double Faults[0]: {match_stats['Double Faults'][0]}")
+    print(f"  TOTAL: {total_points_lost}")
 
     total_points_played = total_points_won + total_points_lost
 
@@ -69,7 +88,7 @@ def collect_stats(match_stats):
     winner_percentage = (match_stats["Winners"][0] / total_points_won * 100) if total_points_won else 0
     double_fault_percentage = (match_stats["Double Faults"][0] / total_points_played * 100) if total_points_played else 0
 
-    stats =  {
+    stats = {
         "Total Points Won": total_points_won,
         "Total Points Lost": total_points_lost,
         "Win Percentage": round(win_percentage, 2),
@@ -82,7 +101,9 @@ def collect_stats(match_stats):
         "Double Faults": match_stats["Double Faults"],
         "Ace Percentage": round(ace_percentage, 2),
         "Winner Percentage": round(winner_percentage, 2),
-        "Double Fault Percentage": round(double_fault_percentage, 2)
+        "Double Fault Percentage": round(double_fault_percentage, 2),
+        "First Serves In": first_serves_in,
+        "Second Serves In": second_serves_in,
     }
 
     print(f"PROCESSED IN collect_stats(): {stats}")  

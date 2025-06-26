@@ -4,6 +4,9 @@ from kivy.uix.popup import Popup
 from score_manager import process_score_update  # ✅ Correct import
 import logging
 from score_manager import get_score_display  # Ensure this is imported
+
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
 # Configure logging (creates a log file for errors)
 logging.basicConfig(
     filename="app_errors.log",
@@ -12,6 +15,41 @@ logging.basicConfig(
 )
 
 DEBUG_MODE = True  # Set to False to disable debug print statements
+
+
+from kivy.uix.label import Label
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.popup import Popup
+from kivy.core.window import Window
+
+def create_custom_popup(title_text, content):
+    """ Creates a styled popup with a custom title. """
+
+    # Custom title label
+    title_label = Label(
+        text=title_text,
+        font_size='15sp',        # ✅ Bigger title font
+        bold=True,               # ✅ Bold text
+        color=(1, 1, 1, 1),      # ✅ White text color
+        size_hint_y=None,
+        height=25
+    )
+
+    # Title container with background color
+    title_container = BoxLayout(orientation='vertical', size_hint_y=None, height=60)
+    title_container.add_widget(title_label)
+
+    # Combine title and content
+    layout = BoxLayout(orientation='vertical')
+    layout.add_widget(title_container)
+    layout.add_widget(content)
+
+    popup = Popup(
+        title='',  # Hide default title
+        content=layout,
+        size_hint=(0.9, 0.4)
+    )
+    return popup
 
 
 def switch_server(instance, _):
@@ -51,18 +89,30 @@ def show_serve_prompt(instance, result):
         else:
             # Player 2 serving (Player 1's perspective)
             serve_options = ["First Serve", "Second Serve", "Double Fault"] if result == "Won" else ["First Serve", "Second Serve"]
-
+        title = "Which serve was used?"
         popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
 
-        for serve in serve_options:
+
+            # ✅ Create a vertically scrollable layout with proper spacing and size_hint
+        grid = GridLayout(cols=1, spacing=15, size_hint_y=None, padding=20)
+        grid.bind(minimum_height=grid.setter('height'))  # Important for ScrollView to work
+
+        for serve_type in serve_options:
             btn = Button(
-                text=serve,
-                on_press=lambda btn, serve=serve: process_serve_selection(instance, serve, result)
+                text=serve_type,
+                font_size=70,            # ✅ Larger font for mobile
+                size_hint_y=None,        # ✅ Fixed height to make buttons easier to tap
+                height=80,               # ✅ Touch-friendly button height
+                on_press=lambda btn, serve_type=serve_type: process_serve_selection(instance, serve_type, result)
             )
+            grid.add_widget(btn)
 
-            popup_layout.add_widget(btn)
-
-        instance.popup = Popup(title="On which serve did the point occur?", content=popup_layout, size_hint=(0.5, 0.5))
+        # ✅ Wrap the layout in a ScrollView for mobile usability
+        scroll = ScrollView(size_hint=(1, 1))
+        scroll.add_widget(grid)
+        
+        popup = create_custom_popup(title, scroll)
+        instance.popup = popup
         instance.popup.open()
 
     except Exception as e:
@@ -113,15 +163,30 @@ def show_point_result_prompt(instance, serve, result):
 
         popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
 
+        
+
+            # ✅ Create a vertically scrollable layout with proper spacing and size_hint
+        grid = GridLayout(cols=1, spacing=15, size_hint_y=None, padding=20)
+        grid.bind(minimum_height=grid.setter('height'))  # Important for ScrollView to work
+
         for shot_type in options:
             btn = Button(
                 text=shot_type,
+                font_size=70,            # ✅ Larger font for mobile
+                size_hint_y=None,        # ✅ Fixed height to make buttons easier to tap
+                height=80,               # ✅ Touch-friendly button height
                 on_press=lambda btn, shot_type=shot_type: process_shot_type_selection(instance, serve, shot_type, result)
             )
-            popup_layout.add_widget(btn)
+            grid.add_widget(btn)
 
-        instance.popup = Popup(title=title, content=popup_layout, size_hint=(0.5, 0.5))
+        # ✅ Wrap the layout in a ScrollView for mobile usability
+        scroll = ScrollView(size_hint=(1, 1))
+        scroll.add_widget(grid)
+        
+        popup = create_custom_popup(title, scroll)
+        instance.popup = popup
         instance.popup.open()
+
 
     except Exception as e:
         logging.error(f"Error in show_point_result_prompt: {e}")
@@ -148,27 +213,46 @@ def process_shot_type_selection(instance, serve, shot_type, result):
             print(f"⚠ Error in process_shot_type_selection: {e}")
 
 
-def show_detailed_shot_prompt(instance, serve, shot_type, result):
-    """ Ask for the specific shot type used (forehand, backhand, etc). """
-    try:
-        shot_options = ["Forehand", "Backhand", "Volley", "Smash","Dropshot","Lob"]
 
-        popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
+def show_detailed_shot_prompt(instance, serve, shot_type, result):
+    """ Ask for the specific shot type used (forehand, backhand, serve, etc). """
+    try:
+        # Default shot options
+        shot_options = ["Forehand", "Backhand", "Volley", "Smash", "Dropshot", "Lob"]
+
+        # ✅ Add "Serve" as an option if it's an opponent error and the player was serving
+        if shot_type == "Opponent Error" and instance.is_player1_serving:
+            shot_options.insert(0, "Serve")
+
+        # ✅ Create a vertically scrollable layout with proper spacing and size_hint
+        grid = GridLayout(cols=1, spacing=15, size_hint_y=None, padding=20)
+        grid.bind(minimum_height=grid.setter('height'))  # Important for ScrollView to work
 
         for detail in shot_options:
             btn = Button(
                 text=detail,
+                font_size=70,            # ✅ Larger font for mobile
+                size_hint_y=None,        # ✅ Fixed height to make buttons easier to tap
+                height=80,               # ✅ Touch-friendly button height
                 on_press=lambda btn, detail=detail: process_score_update(instance, serve, f"{detail} {shot_type}", result)
             )
-            popup_layout.add_widget(btn)
+            grid.add_widget(btn)
 
-        # Determine title dynamically
+        # ✅ Wrap the layout in a ScrollView for mobile usability
+        scroll = ScrollView(size_hint=(1, 1))
+        scroll.add_widget(grid)
+
+        # Title adjustment
         if result == "Lost" and shot_type == "Error":
-            title = "On which shot did the error occur?"
+            title = "With which shot did the error occur?"
+        elif shot_type == "Opponent Error":
+            title = "With which shot was the point won?"
         else:
-            title = "Which shot was used to win the point?" if result == "Won" else "Which shot beat the player?"
+            title = "With which shot did the player/opponent win the point?"
 
-        instance.popup = Popup(title=title, content=popup_layout, size_hint=(0.5, 0.5))
+        # ✅ Popup customization for landscape mobile: larger popup
+        popup = create_custom_popup(title, scroll)
+        instance.popup = popup
         instance.popup.open()
 
 
@@ -176,3 +260,4 @@ def show_detailed_shot_prompt(instance, serve, shot_type, result):
         logging.error(f"Error in show_detailed_shot_prompt: {e}")
         if DEBUG_MODE:
             print(f"⚠ Error in show_detailed_shot_prompt: {e}")
+

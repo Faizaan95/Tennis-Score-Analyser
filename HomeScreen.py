@@ -8,13 +8,23 @@ class HomeScreen(Screen):
 
         layout = BoxLayout(orientation='vertical', spacing=20, padding=40)
 
+
+        button_style = {
+            "font_size": 50,
+            "background_color": (164/255.0, 196/255.0, 255/255.0, 1),
+            "color": (1, 1, 1, 1),
+            "markup": True
+        }
+        
         layout.add_widget(Button(
-            text=" Standard Match",
-            on_press=self.go_to_standard_match
+            text=" [b]Standard Match[/b]",
+            on_press=self.go_to_standard_match,
+            **button_style
         ))
         layout.add_widget(Button(
-            text=" Tiebreak Match",
-            on_press=self.go_to_tiebreak_match
+            text=" [b]Tiebreak Match[/b]",
+            on_press=self.go_to_tiebreak_match,
+            **button_style
         ))
 
         self.add_widget(layout)

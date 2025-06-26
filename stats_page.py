@@ -24,7 +24,15 @@ class StatsPage(Screen):
         
 
         # Stats display label
-        self.stats_label = Label(text="Stats will be displayed here.", font_size=24)
+        self.stats_label = Label(
+            text="Stats will be displayed here.",
+            font_size=24,
+            markup=True,              # ✅ Enable markup
+            halign="center",
+            valign="middle",
+            text_size=(self.width, None)
+        )
+        self.stats_label.bind(width=lambda lbl, *a: setattr(lbl, 'text_size', (lbl.width, None)))
         self.layout.add_widget(self.stats_label)
 
         # Buttons layout
@@ -62,8 +70,10 @@ class StatsPage(Screen):
             f"Total Points Lost: {stats['Total Points Lost']}\n"
             f"Win Percentage: {stats['Win Percentage']:.2f}%\n\n"
 
-            f"Aces (First Serve): {stats['Aces (First Serve)'][0]} | {stats['Aces (First Serve)'][1]}\n"
-            f"Aces (Second Serve): {stats['Aces (Second Serve)'][0]} | {stats['Aces (Second Serve)'][1]}\n"
+            f"First Serves In: {stats['First Serves In'][0]}\n"
+            f"Second Serves In: {stats['Second Serves In'][0]}\n"
+            f"Double Faults: {stats['Double Faults'][0]}\n\n"
+            
 
             f"Winners (First Serve): {stats['Winners (First Serve)'][0]} | {stats['Winners (First Serve)'][1]}\n"
             f"Winners (Second Serve): {stats['Winners (Second Serve)'][0]} | {stats['Winners (Second Serve)'][1]}\n\n"
@@ -71,7 +81,6 @@ class StatsPage(Screen):
             f"Errors (Player): {match_stats.get('Errors', [0, 0])[0]}\n"
             f"Opponent Winners: {match_stats.get('Opponent Winners', [0, 0])[1]}\n\n"
 
-            f"Double Faults: {stats['Double Faults'][0]}"
         )
         
                 # Optional breakdown
