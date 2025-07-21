@@ -230,6 +230,9 @@ class TestMatchStatLogic(unittest.TestCase):
         print("Point 6: First serve, opponent error")
         
         self.print_all_stats()
+
+
+        
         
         # Verify expected totals
         expected_totals = {
@@ -275,6 +278,45 @@ class TestMatchStatLogic(unittest.TestCase):
             total_won == expected_totals['Total Points Won'],
             total_lost == expected_totals['Total Points Lost']
         ])
+
+
+
+    def test_fixed_function():
+        """Test the fixed function with various scenarios"""
+        
+        class TestInstance:
+            def __init__(self):
+                self.stats = {}
+                self.is_player1_serving = True
+        
+        print("=== TESTING FIXED FUNCTION ===")
+        
+        # Test 1: Player serving, hits ace
+        instance = TestInstance()
+        update_match_statistics(instance, "First Serve", "Ace", "Won")
+        print(f"Player ace: {instance.stats}")
+        
+        # Test 2: Opponent serving, hits ace
+        instance = TestInstance()
+        instance.is_player1_serving = False
+        update_match_statistics(instance, "First Serve", "Ace", "Lost")
+        print(f"Opponent ace: {instance.stats}")
+        
+        # Test 3: Player serving, opponent hits winner
+        instance = TestInstance()
+        update_match_statistics(instance, "Second Serve", "Forehand Winner", "Lost")
+        print(f"Opponent winner on player serve: {instance.stats}")
+        
+        # Test 4: Opponent serving, player hits winner
+        instance = TestInstance()
+        instance.is_player1_serving = False
+        update_match_statistics(instance, "First Serve", "Backhand Winner", "Won")
+        print(f"Player winner on opponent serve: {instance.stats}")
+        
+        print("=== END TEST ===")
+
+    if __name__ == "__main__":
+        test_fixed_function()
 
 if __name__ == "__main__":
     # Run the comprehensive test first

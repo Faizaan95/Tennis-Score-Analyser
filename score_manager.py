@@ -134,56 +134,91 @@ def process_score_update(instance, serve, point_type, result):
 
 
 def update_match_statistics(instance, serve, point_type, result):
-    """Update match statistics based on the point played."""
+    """
+    Update match statistics based on the point played.
+    
+    Args:
+        instance: Object containing stats dictionary and serving info
+        serve: Type of serve ("First Serve", "Second Serve", "Double Fault")
+        point_type: What happened ("Ace", "Forehand Winner", "Backhand Error", etc.)
+        result: Outcome for the player ("Won", "Lost")
+    """
+    
+    player_serving = getattr(instance, "is_player1_serving", True)
+
     try:
         if DEBUG_MODE:
-            import traceback
-            print(f"📊 STATS CALL: serve='{serve}', point_type='{point_type}', result='{result}'")
-            print(f"📊 CALL STACK: {traceback.format_stack()[-3:-1]}")  # Show where this was called from
-
+            print(f"📊 STATS CALL: serve='{serve}', point_type='{point_type}', result='{result}', player_serving={player_serving}")
 
         # Handle Double Fault specifically
-        if serve == "Double Fault" and result == "Lost":
+        if serve == "Double Fault" and point_type == "Double Fault":
             if "Double Faults" not in instance.stats:
                 instance.stats["Double Faults"] = [0, 0]
-            instance.stats["Double Faults"][0] += 1  # Player's double fault
+            
+            # Double fault is always by the server
+            if player_serving:
+                instance.stats["Double Faults"][0] += 1  # Player's double fault
+            else:
+                instance.stats["Double Faults"][1] += 1  # Opponent's double fault
+            
             if DEBUG_MODE:
-                print("📊 Tracked: Double Faults")
+                print(f"📊 Tracked: Double Fault for {'Player' if player_serving else 'Opponent'}")
             return
 
-        # Handle Ace
-        if point_type == "Ace" and result == "Won":
+        # Handle Aces - can be hit by either player or opponent
+        if point_type == "Ace":
             if "Aces" not in instance.stats:
                 instance.stats["Aces"] = [0, 0]
-            instance.stats["Aces"][0] += 1
+            
+            # Determine who hit the ace based on serving and result
+            if player_serving and result == "Won":
+                # Player serving and won = player ace
+                instance.stats["Aces"][0] += 1
+                ace_hitter = "Player"
+            elif not player_serving and result == "Lost":
+                # Opponent serving and player lost = opponent ace
+                instance.stats["Aces"][1] += 1
+                ace_hitter = "Opponent"
+            else:
+                # This shouldn't happen for aces, but handle gracefully
+                if DEBUG_MODE:
+                    print("⚠️ Unusual ace scenario - review logic")
+                return
 
-            # Add specific serve ace tracking
+            # Track serve-specific aces
             if serve in ["First Serve", "Second Serve"]:
                 ace_key = f"{serve} Aces"
                 if ace_key not in instance.stats:
                     instance.stats[ace_key] = [0, 0]
-                instance.stats[ace_key][0] += 1
                 
-                # Track serves in for aces (only once)
+                if ace_hitter == "Player":
+                    instance.stats[ace_key][0] += 1
+                else:
+                    instance.stats[ace_key][1] += 1
+                
+                # Track serves in for aces
                 serve_in_key = f"{serve}s In"
                 if serve_in_key not in instance.stats:
                     instance.stats[serve_in_key] = [0, 0]
-                instance.stats[serve_in_key][0] += 1
+                
+                if player_serving:
+                    instance.stats[serve_in_key][0] += 1
+                else:
+                    instance.stats[serve_in_key][1] += 1
                 
                 if DEBUG_MODE:
-                    print(f"📊 Tracked: {ace_key} and {serve_in_key}")
+                    print(f"📊 Tracked: {ace_hitter} {ace_key} and serve in")
 
-            if DEBUG_MODE:
-                print("📊 Tracked: Aces")
             return
 
-        # Track serves in (only for non-ace, non-double fault serves)
-        if serve in ["First Serve", "Second Serve"] and point_type != "Double Fault":
+        # Track serves in (for all serves that aren't double faults or aces)
+        if serve in ["First Serve", "Second Serve"]:
             serve_in_key = f"{serve}s In"
             if serve_in_key not in instance.stats:
                 instance.stats[serve_in_key] = [0, 0]
             
-            if result == "Won":
+            # The server gets credit for serve in
+            if player_serving:
                 instance.stats[serve_in_key][0] += 1
             else:
                 instance.stats[serve_in_key][1] += 1
@@ -192,58 +227,86 @@ def update_match_statistics(instance, serve, point_type, result):
         point_parts = point_type.split()
         
         if len(point_parts) >= 2:
-            shot_type, outcome = point_parts[0], point_parts[1]
+            shot_type = point_parts[0]
+            outcome = point_parts[1]
             
-            # Track winners and errors
-            if result == "Won":
-                if "Winner" in outcome:
-                    # Player winner
-                    instance.stats.setdefault("Winners", [0,0])[0] += 1
-                    if serve in ["First Serve", "Second Serve"]:
-                        instance.stats.setdefault(f"{serve} Winners", [0,0])[0] += 1
-                    if DEBUG_MODE:
-                        print("📊 Tracked: Player Winner")
-
-                elif "Error" in outcome or "Error" in point_type:
-                    instance.stats.setdefault("Errors", [0, 0])[1] += 1  # Opponent made an error
-                    if DEBUG_MODE:
-                        print("📊 Tracked: Opponent Error → Player Wins")
-
-            elif result == "Lost":
-                if "Winner" in outcome:
-                    # Opponent hit a winner
-                    instance.stats.setdefault("Winners", [0,0])[1] += 1
-                    if serve in ["First Serve", "Second Serve"]:
-                        instance.stats.setdefault(f"{serve} Winners", [0,0])[1] += 1
-                    if DEBUG_MODE:
-                        print("📊 Tracked: Opponent Winner")
-
-                elif "Error" in outcome:
-                    instance.stats.setdefault("Errors", [0, 0])[0] += 1  # Player made an error
-                    if DEBUG_MODE:
-                        print("📊 Tracked: Player Error → Point Lost")
-
-            # Track specific shot types on serves
-            if serve in ["First Serve", "Second Serve"]:
-                serve_shot_key = f"{serve} {point_type}s"
-                if serve_shot_key not in instance.stats:
-                    instance.stats[serve_shot_key] = [0, 0]
+            # Determine who made the shot and track accordingly
+            if "Winner" in outcome:
+                # Someone hit a winner
+                if "Winners" not in instance.stats:
+                    instance.stats["Winners"] = [0, 0]
                 
-                if "Error" in outcome and result == "Lost":
-                    instance.stats[serve_shot_key][0] += 1  # Player error
-                elif "Error" in outcome and result == "Won":
-                    instance.stats[serve_shot_key][1] += 1  # Opponent error
+                if result == "Won":
+                    # Player won the point, so player hit the winner
+                    instance.stats["Winners"][0] += 1
+                    shot_maker = "Player"
                 else:
-                    instance.stats[serve_shot_key][0 if result == "Won" else 1] += 1
+                    # Player lost the point, so opponent hit the winner
+                    instance.stats["Winners"][1] += 1
+                    shot_maker = "Opponent"
+                
+                # Track serve-specific winners
+                if serve in ["First Serve", "Second Serve"]:
+                    winner_key = f"{serve} Winners"
+                    if winner_key not in instance.stats:
+                        instance.stats[winner_key] = [0, 0]
+                    
+                    if shot_maker == "Player":
+                        instance.stats[winner_key][0] += 1
+                    else:
+                        instance.stats[winner_key][1] += 1
+                
+                if DEBUG_MODE:
+                    print(f"📊 Tracked: {shot_maker} Winner")
 
+            elif "Error" in outcome or "Error" in point_type:
+                # Someone made an error
+                if "Errors" not in instance.stats:
+                    instance.stats["Errors"] = [0, 0]
+                
+                if result == "Lost":
+                    # Player lost the point, so player made the error
+                    instance.stats["Errors"][0] += 1
+                    error_maker = "Player"
+                else:
+                    # Player won the point, so opponent made the error
+                    instance.stats["Errors"][1] += 1
+                    error_maker = "Opponent"
+                
+                if DEBUG_MODE:
+                    print(f"📊 Tracked: {error_maker} Error")
+
+            # Track detailed shot statistics
+            if serve in ["First Serve", "Second Serve"]:
+                # Create a detailed key for this specific shot
+                detailed_key = f"{serve} {point_type}s"
+                if detailed_key not in instance.stats:
+                    instance.stats[detailed_key] = [0, 0]
+                
+                # Determine who made the shot
+                if "Error" in outcome:
+                    # Error attribution
+                    if result == "Lost":
+                        instance.stats[detailed_key][0] += 1  # Player error
+                    else:
+                        instance.stats[detailed_key][1] += 1  # Opponent error
+                else:
+                    # Winner attribution
+                    if result == "Won":
+                        instance.stats[detailed_key][0] += 1  # Player winner
+                    else:
+                        instance.stats[detailed_key][1] += 1  # Opponent winner
 
     except Exception as e:
         logging.error(f"Error updating match statistics: {e}")
         if DEBUG_MODE:
-            print(f"⚠ Error updating statistics: {e}")
+            print(f"⚠️ Error updating statistics: {e}")
+            import traceback
+            traceback.print_exc()
 
     if DEBUG_MODE:
         print(f"📈 Current Stats: {instance.stats}")
+
         
 def calculate_tennis_score(player, opponent, game_score, set_score, is_player, tiebreaker_active, is_dedicated_tiebreaker=False):
     """Calculate tennis score progression."""

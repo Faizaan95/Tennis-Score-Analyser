@@ -75,11 +75,11 @@ class StatsPage(Screen):
             f"Double Faults: {stats['Double Faults'][0]}\n\n"
             
 
-            f"Winners (First Serve): {stats['Winners (First Serve)'][0]} | {stats['Winners (First Serve)'][1]}\n"
-            f"Winners (Second Serve): {stats['Winners (Second Serve)'][0]} | {stats['Winners (Second Serve)'][1]}\n\n"
+            f"First Serve Winners: {stats['First Serve Winners'][0]} | {stats['First Serve Winners'][1]}\n"
+            f"Second Serve Winners: {stats['Second Serve Winners'][0]} | {stats['Second Serve Winners'][1]}\n\n"
 
             f"Errors (Player): {match_stats.get('Errors', [0, 0])[0]}\n"
-            f"Opponent Winners: {match_stats.get('Opponent Winners', [0, 0])[1]}\n\n"
+            f"Opponent Winners: {match_stats.get('Winners', [0, 0])[1]}\n\n"
 
         )
         

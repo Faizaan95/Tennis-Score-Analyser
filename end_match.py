@@ -10,6 +10,8 @@ from kivy.uix.label import Label
 from kivy.uix.switch import Switch
 from kivy.uix.filechooser import FileChooserListView
 from kivy.utils import platform
+from stats_generator import collect_stats
+
 import csv
 
 # Logging
@@ -93,26 +95,31 @@ def finalize_match(instance, folder_name, custom_base=None):
     try:
         base_folder = get_save_folder(folder_name, custom_base)
         
-        # ✅ Patch: Ensure all expected stat keys exist
-        required_keys = [
-            "First Serve Winners", "Second Serve Winners",
-            "First Serve Aces", "Second Serve Aces",
-            "Double Faults", "Winners", "Errors",
-            "Aces","First Serve Forehand Winners",  
-            "First Serves In",               
-            "Second Serves In" 
-        ]
-        for key in required_keys:
-            if key not in instance.stats:
-                instance.stats[key] = [0, 0]
+        # 1) Keep a copy of the raw stats 
+        raw_stats = instance.stats.copy()
+
+        # 2) Generate clean, aggregated stats
+        clean_stats = collect_stats(raw_stats)
         
+        # 3) Start with clean aggregated stats
+        instance.stats = clean_stats.copy()
+        
+        # 4) Add back the detailed shot-by-shot stats that aren't redundant
+        for key, value in raw_stats.items():
+            # Skip if this key is already in our clean stats (avoid duplicates)
+            if key not in instance.stats:
+                # Only add detailed shot stats (they contain specific shot types)
+                if any(shot_type in key for shot_type in ['Forehand', 'Backhand', 'Volley', 'Smash', 'Lob', 'Dropshot', 'Overhead']):
+                    instance.stats[key] = value
+
+        # ✅ Build match data with clean stats only
         match_data = {
             "player_score": instance.player_score,
             "opponent_score": instance.opponent_score,
             "game_score": instance.game_score,
             "set_score": instance.set_score,
             "set_history": instance.set_history,
-            "stats": instance.stats,
+            "stats": instance.stats,  # Now contains only clean, aggregated stats
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
@@ -122,29 +129,67 @@ def finalize_match(instance, folder_name, custom_base=None):
             json.dump(match_data, f, indent=4)
         print(f"✅ JSON saved at {json_path}")
 
-        # Save TXT
+        # Save TXT with clean formatting
         txt_path = os.path.join(base_folder, "match_summary.txt")
         with open(txt_path, "w") as f:
             f.write(f"Match Summary - {folder_name}\n")
-            f.write(f"Date: {match_data['timestamp']}\n\n")
-            f.write(f"Final Score:\n  Player: {instance.player_score}\n  Opponent: {instance.opponent_score}\n\n")
+            f.write(f"Date: {match_data['timestamp']}\n")
+            f.write("=" * 50 + "\n\n")
+            
+            f.write(f"Final Score:\n")
+            f.write(f"  Player: {instance.player_score}\n")
+            f.write(f"  Opponent: {instance.opponent_score}\n\n")
+            
             f.write(f"Set Score: {instance.set_score}\n")
-            f.write(f"Set History: {', '.join(match_data['set_history'])}\n")
+            f.write(f"Set History: {', '.join(match_data['set_history']) if match_data['set_history'] else 'None'}\n")
             f.write(f"Game Score: {instance.game_score}\n\n")
-            f.write("Statistics:\n")
-            for k, v in instance.stats.items():
-                f.write(f"  {k}: {v}\n")
+            
+            f.write("Match Statistics:\n")
+            f.write("-" * 30 + "\n")
+            
+            # Organize stats in a logical order - AGGREGATED STATS FIRST
+            key_order = [
+                "Total Points Won", "Total Points Lost", "Win Percentage",
+                "Aces", "First Serve Aces", "Second Serve Aces", 
+                "Double Faults", "First Serves In", "Second Serves In",
+                "Winners", "First Serve Winners", "Second Serve Winners",
+                "Errors", "Ace Percentage", "Winner Percentage", "Double Fault Percentage"
+            ]
+            
+            f.write("SUMMARY STATS:\n")
+            for key in key_order:
+                if key in instance.stats:
+                    value = instance.stats[key]
+                    if isinstance(value, list):
+                        f.write(f"  {key}: Player {value[0]} | Opponent {value[1]}\n")
+                    else:
+                        f.write(f"  {key}: {value}\n")
+            
+            # Add detailed shot-by-shot stats
+            f.write(f"\nDETAILED SHOT STATS:\n")
+            for key, value in instance.stats.items():
+                if key not in key_order:  # These are the detailed stats
+                    if isinstance(value, list):
+                        f.write(f"  {key}: Player {value[0]} | Opponent {value[1]}\n")
+                    else:
+                        f.write(f"  {key}: {value}\n")
+                        
         print(f"✅ TXT Summary saved at {txt_path}")
 
-        # Save CSV
+        # Save CSV with clean formatting
         csv_path = os.path.join(base_folder, "match_stats.csv")
         with open(csv_path, "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["Stat", "Player", "Opponent"])
+            writer.writerow(["Statistic", "Player", "Opponent"])
+            
             for stat, values in instance.stats.items():
-                player_val = values[0] if isinstance(values, list) else values
-                opponent_val = values[1] if isinstance(values, list) else ""
-                writer.writerow([stat, player_val, opponent_val])
+                if isinstance(values, list) and len(values) >= 2:
+                    writer.writerow([stat, values[0], values[1]])
+                elif isinstance(values, list) and len(values) == 1:
+                    writer.writerow([stat, values[0], ""])
+                else:
+                    writer.writerow([stat, values, ""])
+                    
         print(f"✅ CSV saved at {csv_path}")
 
         # Reset match data
@@ -161,7 +206,6 @@ def finalize_match(instance, folder_name, custom_base=None):
         if hasattr(instance, "reset_match"):
             instance.reset_match()
         
-
         instance.update_live_stats()
         instance.manager.current = "home"
         print("✅ Match reset and returned to home.")
@@ -176,16 +220,17 @@ def finalize_match(instance, folder_name, custom_base=None):
 
 def show_save_success_popup(save_path):
     content = BoxLayout(orientation='vertical', spacing=10, padding=10)
-    content.add_widget(Label(text="Match saved "))
+    content.add_widget(Label(text="Match saved successfully!"))
+    content.add_widget(Label(text=f"Location: {save_path}", text_size=(None, None)))
     btn = Button(text="OK", size_hint_y=None, height=40)
     content.add_widget(btn)
-    popup = Popup(title="Success", content=content, size_hint=(0.9, 0.5))
+    popup = Popup(title="Success", content=content, size_hint=(0.9, 0.6))
     btn.bind(on_press=popup.dismiss)
     popup.open()
 
 def show_error_popup(message):
     content = BoxLayout(orientation='vertical', spacing=10, padding=10)
-    content.add_widget(Label(text=message))
+    content.add_widget(Label(text=f"Error: {message}"))
     btn = Button(text="OK", size_hint_y=None, height=40)
     content.add_widget(btn)
     popup = Popup(title="Error", content=content, size_hint=(0.8, 0.4))

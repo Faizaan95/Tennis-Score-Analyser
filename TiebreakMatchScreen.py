@@ -59,18 +59,19 @@ class TiebreakMatchScreen(Screen):
         
         
         button_style = {
-            "font_size": 22,
+            "font_size": 30,
             "background_color": (164/255.0, 196/255.0, 255/255.0, 1),
             "color": (1, 1, 1, 1),
             "markup": True
         }
 
         main_layout.add_widget(Button(
-            text="Back to Home",
-            size_hint=(1, 0.1),
+            text="[b]Back to Home[/b]",
+            size_hint=(1, 0.3),
             on_press=lambda btn: self.go_to_home(),
             **button_style
         ))
+
 
         # ➕ Buttons
         button_layout = GridLayout(cols=2, spacing=10, size_hint=(1, 0.4))
