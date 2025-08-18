@@ -1,0 +1,14 @@
+2025-08-12 23:09:02,584 - ERROR - Error updating match statistics: can only concatenate str (not "int") to str
+2025-08-12 23:09:02,585 - ERROR - Error updating match statistics: can only concatenate str (not "int") to str
+2025-08-12 23:09:02,591 - ERROR - Error updating match statistics: can only concatenate str (not "int") to str
+2025-08-12 23:09:02,614 - ERROR - Error updating match statistics: can only concatenate str (not "int") to str
+2025-08-12 23:09:02,615 - ERROR - Error updating match statistics: can only concatenate str (not "int") to str
+2025-08-12 23:09:02,619 - ERROR - Error updating match statistics: can only concatenate str (not "int") to str
+2025-08-12 23:09:02,620 - ERROR - Error updating match statistics: can only concatenate str (not "int") to str
+2025-08-12 23:14:54,243 - ERROR - Error updating match statistics: cannot access local variable 'serve_in_key' where it is not associated with a value
+2025-08-12 23:14:54,244 - ERROR - Error updating match statistics: cannot access local variable 'serve_in_key' where it is not associated with a value
+2025-08-12 23:14:54,248 - ERROR - Error updating match statistics: cannot access local variable 'serve_in_key' where it is not associated with a value
+2025-08-12 23:14:54,270 - ERROR - Error updating match statistics: cannot access local variable 'serve_in_key' where it is not associated with a value
+2025-08-12 23:14:54,273 - ERROR - Error updating match statistics: cannot access local variable 'serve_in_key' where it is not associated with a value
+2025-08-12 23:14:54,279 - ERROR - Error updating match statistics: cannot access local variable 'serve_in_key' where it is not associated with a value
+2025-08-12 23:14:54,280 - ERROR - Error updating match statistics: cannot access local variable 'serve_in_key' where it is not associated with a value

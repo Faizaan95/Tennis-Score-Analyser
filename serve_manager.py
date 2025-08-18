@@ -151,21 +151,27 @@ def show_point_result_prompt(instance, serve, result):
         # Dynamic shot result options
         if result == "Won":
             if not instance.is_player1_serving:
-                # Player was returning, can't win with an Ace
+                # Player was receiving, can't win with an Ace
                 options = ["Winner", "Opponent Error"]
+                title = "How did the player win the point?"
             else:
+                # Player was serving, can win with Ace
                 options = ["Ace", "Winner", "Opponent Error"]
-            title = "How did the player win the point?"
+                title = "How did the player win the point?"
 
-        else:
-            options = ["Winner", "Error"]
-            title = "How did the player lose the point?"
+        else:  # result == "Lost"
+            if not instance.is_player1_serving:
+                # Player was receiving, opponent was serving - opponent could have hit an Ace
+                options = ["Ace", "Winner", "Error"]
+                title = "How did the player lose the point?"
+            else:
+                # Player was serving, opponent was receiving - no Ace possible
+                options = ["Winner", "Error"]
+                title = "How did the player lose the point?"
 
         popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
 
-        
-
-            # ✅ Create a vertically scrollable layout with proper spacing and size_hint
+        # ✅ Create a vertically scrollable layout with proper spacing and size_hint
         grid = GridLayout(cols=1, spacing=15, size_hint_y=None, padding=20)
         grid.bind(minimum_height=grid.setter('height'))  # Important for ScrollView to work
 
@@ -186,7 +192,6 @@ def show_point_result_prompt(instance, serve, result):
         popup = create_custom_popup(title, scroll)
         instance.popup = popup
         instance.popup.open()
-
 
     except Exception as e:
         logging.error(f"Error in show_point_result_prompt: {e}")
@@ -215,30 +220,39 @@ def process_shot_type_selection(instance, serve, shot_type, result):
 
 
 def show_detailed_shot_prompt(instance, serve, shot_type, result):
-    """ Ask for the specific shot type used (forehand, backhand, serve, etc). """
+    """ FIXED: Ask for the specific shot type used, properly handling Opponent Error. """
     try:
         # Default shot options
         shot_options = ["Forehand", "Backhand", "Volley", "Smash", "Dropshot", "Lob"]
 
-        # ✅ Add "Serve" as an option if it's an opponent error and the player was serving
+        # Add "Serve" as an option for serving scenarios
         if shot_type == "Opponent Error" and instance.is_player1_serving:
             shot_options.insert(0, "Serve")
+        
+            
+            
+        if not instance.is_player1_serving and (
+            (result == "Lost" and shot_type == "Error") or
+            (result not in ("Lost", "Winner"))
+        ):
+            shot_options.insert(0, "Return Forehand")
+            shot_options.insert(1, "Return Backhand")
 
-        # ✅ Create a vertically scrollable layout with proper spacing and size_hint
+
+
         grid = GridLayout(cols=1, spacing=15, size_hint_y=None, padding=20)
-        grid.bind(minimum_height=grid.setter('height'))  # Important for ScrollView to work
+        grid.bind(minimum_height=grid.setter('height'))
 
         for detail in shot_options:
             btn = Button(
                 text=detail,
-                font_size=70,            # ✅ Larger font for mobile
-                size_hint_y=None,        # ✅ Fixed height to make buttons easier to tap
-                height=80,               # ✅ Touch-friendly button height
-                on_press=lambda btn, detail=detail: process_score_update(instance, serve, f"{detail} {shot_type}", result)
+                font_size=70,
+                size_hint_y=None,
+                height=80,
+                on_press=lambda btn, detail=detail: finalize_shot_selection(instance, serve, detail, shot_type, result)
             )
             grid.add_widget(btn)
 
-        # ✅ Wrap the layout in a ScrollView for mobile usability
         scroll = ScrollView(size_hint=(1, 1))
         scroll.add_widget(grid)
 
@@ -246,18 +260,37 @@ def show_detailed_shot_prompt(instance, serve, shot_type, result):
         if result == "Lost" and shot_type == "Error":
             title = "With which shot did the error occur?"
         elif shot_type == "Opponent Error":
-            title = "With which shot was the point won?"
+            title = "Which shot was hit that forced the opponent's error?"
         else:
-            title = "With which shot did the player/opponent win the point?"
+            title = "With which shot did you/opponent win the point?"
 
-        # ✅ Popup customization for landscape mobile: larger popup
         popup = create_custom_popup(title, scroll)
         instance.popup = popup
         instance.popup.open()
-
 
     except Exception as e:
         logging.error(f"Error in show_detailed_shot_prompt: {e}")
         if DEBUG_MODE:
             print(f"⚠ Error in show_detailed_shot_prompt: {e}")
 
+
+def finalize_shot_selection(instance, serve, shot_detail, shot_type, result):
+    """ FIXED: Properly format the point_type and call process_score_update. """
+    try:
+        instance.popup.dismiss()
+        
+        # Format the point_type correctly
+        if shot_type == "Opponent Error":
+            point_type = f"{shot_detail} Opponent Error"
+        else:
+            point_type = f"{shot_detail} {shot_type}"
+        
+        if DEBUG_MODE:
+            print(f"🎯 Final shot selection: serve='{serve}', point_type='{point_type}', result='{result}'")
+        
+        process_score_update(instance, serve, point_type, result)
+
+    except Exception as e:
+        logging.error(f"Error in finalize_shot_selection: {e}")
+        if DEBUG_MODE:
+            print(f"⚠ Error in finalize_shot_selection: {e}")

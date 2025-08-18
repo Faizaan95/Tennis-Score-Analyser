@@ -21,10 +21,9 @@ def update_score(player_score, opponent_score, game_score, set_score, result, ti
             player_score, opponent_score, game_score, set_score, True, tiebreaker_active, is_dedicated_tiebreaker
         )
     elif result == "Lost":
-        opponent_score, player_score, game_score, set_score, tiebreaker_active,set_completed,game_score_before_reset = calculate_tennis_score(
-            opponent_score, player_score, game_score, set_score, False, tiebreaker_active, is_dedicated_tiebreaker
+        player_score, opponent_score, game_score, set_score, tiebreaker_active,set_completed,game_score_before_reset = calculate_tennis_score(
+            player_score, opponent_score, game_score, set_score, False, tiebreaker_active, is_dedicated_tiebreaker
         )
-
         # Handle double fault stats in the legacy function
         if reason == "Double Fault":
             if "Double Fault" in stats:
@@ -133,16 +132,8 @@ def process_score_update(instance, serve, point_type, result):
             print(f"⚠ Error in process_score_update: {e}")
 
 
+
 def update_match_statistics(instance, serve, point_type, result):
-    """
-    Update match statistics based on the point played.
-    
-    Args:
-        instance: Object containing stats dictionary and serving info
-        serve: Type of serve ("First Serve", "Second Serve", "Double Fault")
-        point_type: What happened ("Ace", "Forehand Winner", "Backhand Error", etc.)
-        result: Outcome for the player ("Won", "Lost")
-    """
     
     player_serving = getattr(instance, "is_player1_serving", True)
 
@@ -151,178 +142,182 @@ def update_match_statistics(instance, serve, point_type, result):
             print(f"📊 STATS CALL: serve='{serve}', point_type='{point_type}', result='{result}', player_serving={player_serving}")
 
         # Handle Double Fault specifically
-        if serve == "Double Fault" and point_type == "Double Fault":
+        if serve == "Double Fault":
             if "Double Faults" not in instance.stats:
                 instance.stats["Double Faults"] = [0, 0]
             
-            # Double fault is always by the server
+            # Whoever was serving made the double fault
             if player_serving:
-                instance.stats["Double Faults"][0] += 1  # Player's double fault
+                instance.stats["Double Faults"][0] += 1  # Player double fault
             else:
-                instance.stats["Double Faults"][1] += 1  # Opponent's double fault
+                instance.stats["Double Faults"][1] += 1  # Opponent double fault
             
             if DEBUG_MODE:
-                print(f"📊 Tracked: Double Fault for {'Player' if player_serving else 'Opponent'}")
+                who_faulted = "Player" if player_serving else "Opponent"
+                print(f"📊 Tracked: {who_faulted} Double Fault")
             return
 
-        # Handle Aces - can be hit by either player or opponent
-        if point_type == "Ace":
+        # Handle Ace properly
+        if (serve in ["First Serve", "Second Serve"] and point_type == "Ace"):
+            
+            # Track total aces
             if "Aces" not in instance.stats:
                 instance.stats["Aces"] = [0, 0]
-            
-            # Determine who hit the ace based on serving and result
-            if player_serving and result == "Won":
-                # Player serving and won = player ace
-                instance.stats["Aces"][0] += 1
-                ace_hitter = "Player"
-            elif not player_serving and result == "Lost":
-                # Opponent serving and player lost = opponent ace
-                instance.stats["Aces"][1] += 1
-                ace_hitter = "Opponent"
-            else:
-                # This shouldn't happen for aces, but handle gracefully
-                if DEBUG_MODE:
-                    print("⚠️ Unusual ace scenario - review logic")
-                return
+            instance.stats["Aces"][0 if player_serving else 1] += 1
 
             # Track serve-specific aces
-            if serve in ["First Serve", "Second Serve"]:
-                ace_key = f"{serve} Aces"
-                if ace_key not in instance.stats:
-                    instance.stats[ace_key] = [0, 0]
-                
-                if ace_hitter == "Player":
-                    instance.stats[ace_key][0] += 1
-                else:
-                    instance.stats[ace_key][1] += 1
-                
-                # Track serves in for aces
-                serve_in_key = f"{serve}s In"
-                if serve_in_key not in instance.stats:
-                    instance.stats[serve_in_key] = [0, 0]
-                
-                if player_serving:
-                    instance.stats[serve_in_key][0] += 1
-                else:
-                    instance.stats[serve_in_key][1] += 1
-                
-                if DEBUG_MODE:
-                    print(f"📊 Tracked: {ace_hitter} {ace_key} and serve in")
-
+            ace_key = f"{serve} Aces"
+            if ace_key not in instance.stats:
+                instance.stats[ace_key] = [0, 0]
+            instance.stats[ace_key][0 if player_serving else 1] += 1
+            
+            # Track serves in for aces
+            serve_in_key = f"{serve}s In"
+            if serve_in_key not in instance.stats:
+                instance.stats[serve_in_key] = [0, 0]
+            instance.stats[serve_in_key][0 if player_serving else 1] += 1
+            
+            if DEBUG_MODE:
+                print(f"📊 Tracked: Ace on {serve} by {'Player' if player_serving else 'Opponent'}")
             return
 
-        # Track serves in (for all serves that aren't double faults or aces)
+        # Track serves in (for all serves that aren't double faults)
         if serve in ["First Serve", "Second Serve"]:
             serve_in_key = f"{serve}s In"
             if serve_in_key not in instance.stats:
                 instance.stats[serve_in_key] = [0, 0]
-            
-            # The server gets credit for serve in
-            if player_serving:
-                instance.stats[serve_in_key][0] += 1
-            else:
-                instance.stats[serve_in_key][1] += 1
+            instance.stats[serve_in_key][0 if player_serving else 1] += 1
 
-        # Parse the point_type to extract shot and outcome
+        # Parse point_type for shot analysis
         point_parts = point_type.split()
         
         if len(point_parts) >= 2:
-            shot_type = point_parts[0]
-            outcome = point_parts[1]
+            # Handle different point_type formats
+            if "Error" in point_type:
+                # For errors, the last word is always "Error"
+                outcome = "Error"
+                shot_type = " ".join(point_parts[:-1])  # Everything except "Error"
+            elif "Winner" in point_type:
+                # For winners, the last word is always "Winner" 
+                outcome = "Winner"
+                shot_type = " ".join(point_parts[:-1])  # Everything except "Winner"
+            else:
+                # Default parsing
+                shot_type, outcome = point_parts[0], point_parts[1]
+                
+            if DEBUG_MODE:
+                print(f"🔍 Parsed: shot_type='{shot_type}', outcome='{outcome}'")
             
-            # Determine who made the shot and track accordingly
-            if "Winner" in outcome:
-                # Someone hit a winner
-                if "Winners" not in instance.stats:
-                    instance.stats["Winners"] = [0, 0]
+            # Create clean stat names based on who is serving
+            serving_prefix = "Player Serving" if player_serving else "Opponent Serving"
+            
+            # Handle "Opponent Error" correctly
+            if outcome == "Opponent" and len(point_parts) >= 3 and point_parts[2] == "Error":
+                shot_key = f"{serving_prefix} {serve} {shot_type} Opponent Errors"
+                if shot_key not in instance.stats:
+                    instance.stats[shot_key] = [0, 0]
                 
                 if result == "Won":
-                    # Player won the point, so player hit the winner
-                    instance.stats["Winners"][0] += 1
-                    shot_maker = "Player"
-                else:
-                    # Player lost the point, so opponent hit the winner
-                    instance.stats["Winners"][1] += 1
-                    shot_maker = "Opponent"
+                    instance.stats[shot_key][0 if player_serving else 1] += 1
                 
-                # Track serve-specific winners
-                if serve in ["First Serve", "Second Serve"]:
-                    winner_key = f"{serve} Winners"
-                    if winner_key not in instance.stats:
-                        instance.stats[winner_key] = [0, 0]
+                # Track in aggregate errors
+                instance.stats.setdefault("Errors", [0,0])[1 if player_serving else 0] += 1
+                
+                if DEBUG_MODE:
+                    print(f"📊 Tracked: {shot_key}")
+                return
+            
+            # Track aggregate winners and errors
+            if result == "Won":
+                if "Winner" in outcome:
+                    instance.stats.setdefault("Winners", [0,0])[0] += 1
+                elif "Error" in outcome:
+                    instance.stats.setdefault("Errors", [0,0])[1] += 1
                     
-                    if shot_maker == "Player":
-                        instance.stats[winner_key][0] += 1
-                    else:
-                        instance.stats[winner_key][1] += 1
-                
-                if DEBUG_MODE:
-                    print(f"📊 Tracked: {shot_maker} Winner")
+            elif result == "Lost":
+                if "Winner" in outcome:
+                    instance.stats.setdefault("Winners", [0,0])[1] += 1
+                elif "Error" in outcome:
+                    instance.stats.setdefault("Errors", [0,0])[0] += 1
 
-            elif "Error" in outcome or "Error" in point_type:
-                # Someone made an error
-                if "Errors" not in instance.stats:
-                    instance.stats["Errors"] = [0, 0]
-                
-                if result == "Lost":
-                    # Player lost the point, so player made the error
-                    instance.stats["Errors"][0] += 1
-                    error_maker = "Player"
-                else:
-                    # Player won the point, so opponent made the error
-                    instance.stats["Errors"][1] += 1
-                    error_maker = "Opponent"
-                
-                if DEBUG_MODE:
-                    print(f"📊 Tracked: {error_maker} Error")
-
-            # Track detailed shot statistics
+            # Track detailed shot stats - CORRECTED LOGIC
             if serve in ["First Serve", "Second Serve"]:
-                # Create a detailed key for this specific shot
-                detailed_key = f"{serve} {point_type}s"
-                if detailed_key not in instance.stats:
-                    instance.stats[detailed_key] = [0, 0]
+                shot_key = f"{serving_prefix} {serve} {point_type}s"
+                if shot_key not in instance.stats:
+                    instance.stats[shot_key] = [0, 0]
                 
-                # Determine who made the shot
-                if "Error" in outcome:
-                    # Error attribution
-                    if result == "Lost":
-                        instance.stats[detailed_key][0] += 1  # Player error
-                    else:
-                        instance.stats[detailed_key][1] += 1  # Opponent error
-                else:
-                    # Winner attribution
+                if DEBUG_MODE:
+                    print(f"🔍 Processing detailed stat: {shot_key}")
+                    print(f"🔍 point_type='{point_type}', outcome='{outcome}', result='{result}'")
+                
+                # CORRECTED LOGIC: Attribute the action to whoever performed it
+                if "Winner" in outcome:
+                    # For winners: whoever won the point performed the winning shot
                     if result == "Won":
-                        instance.stats[detailed_key][0] += 1  # Player winner
+                        # Player won = player hit the winner
+                        instance.stats[shot_key][0] += 1  
+                    else:  # result == "Lost"
+                        # Player lost = opponent hit the winner  
+                        instance.stats[shot_key][1] += 1
+                        
+                elif "Error" in outcome:
+                    # For errors: whoever lost the point made the error
+                    if result == "Won":
+                        # Player won = opponent made the error
+                        instance.stats[shot_key][1] += 1
+                    else:  # result == "Lost"
+                        # Player lost = player made the error
+                        instance.stats[shot_key][0] += 1
+                        
+                else:
+                    # Default case: attribute to the serving player
+                    instance.stats[shot_key][0 if player_serving else 1] += 1
+                
+                # Handle serve winners separately
+                if "Winner" in outcome:
+                    winner_key = f"{serve} Winners"
+                    instance.stats.setdefault(winner_key, [0,0])
+                    if result == "Won":
+                        instance.stats[winner_key][0] += 1  # Player hit winner
                     else:
-                        instance.stats[detailed_key][1] += 1  # Opponent winner
+                        instance.stats[winner_key][1] += 1  # Opponent hit winner
 
     except Exception as e:
         logging.error(f"Error updating match statistics: {e}")
         if DEBUG_MODE:
-            print(f"⚠️ Error updating statistics: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"⚠ Error updating statistics: {e}")
 
     if DEBUG_MODE:
         print(f"📈 Current Stats: {instance.stats}")
-
         
 def calculate_tennis_score(player, opponent, game_score, set_score, is_player, tiebreaker_active, is_dedicated_tiebreaker=False):
     """Calculate tennis score progression."""
     tennis_points = [0, 15, 30, 40]
-    
+
     set_completed = False
     game_score_before_reset = None 
 
+    if DEBUG_MODE:
+        print(f"🔍 calculate_tennis_score: player={player}, opponent={opponent}, is_player={is_player}")
+
     if tiebreaker_active:
-        player += 1
+        if is_player:
+            player += 1
+        else:
+            opponent += 1
 
         if is_dedicated_tiebreaker:
             return player, opponent, game_score, set_score, tiebreaker_active, set_completed, game_score_before_reset
 
-        if player >= 7 and (player - opponent) >= 2:
-            set_score[0 if is_player else 1] += 1
+        # Check for tiebreak win
+        if is_player and player >= 7 and (player - opponent) >= 2:
+            set_score[0] += 1
+            game_score = [0, 0]
+            player, opponent = 0, 0
+            tiebreaker_active = False
+            set_completed = True
+        elif not is_player and opponent >= 7 and (opponent - player) >= 2:
+            set_score[1] += 1
             game_score = [0, 0]
             player, opponent = 0, 0
             tiebreaker_active = False
@@ -330,33 +325,55 @@ def calculate_tennis_score(player, opponent, game_score, set_score, is_player, t
 
         return player, opponent, game_score, set_score, tiebreaker_active, set_completed, game_score_before_reset
 
-    # Regular game scoring
-    if isinstance(player, int) and player < 40:
-        player = tennis_points[tennis_points.index(player) + 1]
-    elif player == 40:
-        if opponent in [0, 15, 30]:
+    # Regular game scoring - increment the correct player's score
+    if is_player:
+        # Player won the point
+        if isinstance(player, int) and player < 40:
+            player = tennis_points[tennis_points.index(player) + 1]
+        elif player == 40:
+            if opponent in [0, 15, 30]:
+                player = "Game"
+            elif opponent == 40:
+                player = "Adv"
+            else:  # opponent == "Adv"
+                player, opponent = 40, 40
+        elif player == "Adv":
             player = "Game"
+    else:
+        # Opponent won the point
+        if isinstance(opponent, int) and opponent < 40:
+            opponent = tennis_points[tennis_points.index(opponent) + 1]
         elif opponent == 40:
-            player = "Adv"
-        else:  # opponent == "Adv"
-            player, opponent = 40, 40
-    elif player == "Adv":
-        player = "Game"
+            if player in [0, 15, 30]:
+                opponent = "Game"
+            elif player == 40:
+                opponent = "Adv"
+            else:  # player == "Adv"
+                player, opponent = 40, 40
+        elif opponent == "Adv":
+            opponent = "Game"
 
     # Handle game completion
+    game_winner = None
     if player == "Game":
-        # Increment game first
-        game_score[0 if is_player else 1] += 1
+        game_winner = "player"
+        game_score[0] += 1
+    elif opponent == "Game":
+        game_winner = "opponent"
+        game_score[1] += 1
 
+    if game_winner:
         # Check if this caused a set completion
-        if game_score[0 if is_player else 1] >= 6 and abs(game_score[0] - game_score[1]) >= 2:
-            # Capture the completed set before reset
+        if game_winner == "player" and game_score[0] >= 6 and abs(game_score[0] - game_score[1]) >= 2:
             set_completed = True
             game_score_before_reset = game_score[:]
-            set_score[0 if is_player else 1] += 1
+            set_score[0] += 1
             game_score = [0, 0]
-        
-
+        elif game_winner == "opponent" and game_score[1] >= 6 and abs(game_score[0] - game_score[1]) >= 2:
+            set_completed = True
+            game_score_before_reset = game_score[:]
+            set_score[1] += 1
+            game_score = [0, 0]
         # Check for tiebreaker only if set wasn't completed
         elif game_score[0] == 6 and game_score[1] == 6:
             tiebreaker_active = True
@@ -364,8 +381,10 @@ def calculate_tennis_score(player, opponent, game_score, set_score, is_player, t
         # Reset points
         player, opponent = 0, 0
 
+    if DEBUG_MODE:
+        print(f"🔍 Result: player={player}, opponent={opponent}")
 
-    return player, opponent, game_score, set_score, tiebreaker_active,set_completed,game_score_before_reset
+    return player, opponent, game_score, set_score, tiebreaker_active, set_completed, game_score_before_reset
 
 
 def get_score_display(player_score, opponent_score, game_score, set_score, is_player1_serving, show_server=True):

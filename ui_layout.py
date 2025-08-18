@@ -42,8 +42,6 @@ class TennisScoreLayout(Screen):
             "Second Serve Winners": [0, 0],
             "First Serve Aces": [0, 0],
             "Second Serve Aces": [0, 0],
-            "First Serve Volleys": [0, 0],
-            "Second Serve Volleys": [0, 0],
             "Double Faults": [0, 0]
         }
         

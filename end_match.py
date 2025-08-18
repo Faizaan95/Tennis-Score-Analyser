@@ -109,8 +109,12 @@ def finalize_match(instance, folder_name, custom_base=None):
             # Skip if this key is already in our clean stats (avoid duplicates)
             if key not in instance.stats:
                 # Only add detailed shot stats (they contain specific shot types)
-                if any(shot_type in key for shot_type in ['Forehand', 'Backhand', 'Volley', 'Smash', 'Lob', 'Dropshot', 'Overhead']):
+                detailed_stat_keywords = ['Forehand', 'Backhand', 'Volley', 'Smash', 'Lob', 'Dropshot', 'Overhead',
+                                            'Winner', 'Error', 'Ace', 'Double Fault'  # Add these
+                                            ]
+                if any(keyword in key for keyword in detailed_stat_keywords):
                     instance.stats[key] = value
+
 
         # ✅ Build match data with clean stats only
         match_data = {
@@ -153,7 +157,7 @@ def finalize_match(instance, folder_name, custom_base=None):
                 "Aces", "First Serve Aces", "Second Serve Aces", 
                 "Double Faults", "First Serves In", "Second Serves In",
                 "Winners", "First Serve Winners", "Second Serve Winners",
-                "Errors", "Ace Percentage", "Winner Percentage", "Double Fault Percentage"
+                "Errors", "Ace Percentage", "Winner Percentage", "Double Fault Percentage","Error Percentage"
             ]
             
             f.write("SUMMARY STATS:\n")
