@@ -237,6 +237,14 @@ def show_detailed_shot_prompt(instance, serve, shot_type, result):
         ):
             shot_options.insert(0, "Return Forehand")
             shot_options.insert(1, "Return Backhand")
+            
+            
+        if instance.is_player1_serving and (
+            (result == "Lost" and shot_type == "Winner") or
+            (result not in ("Won", "Error"))
+        ):
+            shot_options.insert(0, "Return Forehand")
+            shot_options.insert(1, "Return Backhand")
 
 
 

@@ -169,14 +169,35 @@ def finalize_match(instance, folder_name, custom_base=None):
                     else:
                         f.write(f"  {key}: {value}\n")
             
-            # Add detailed shot-by-shot stats
+            # Function to automatically abbreviate stat names
+            def abbreviate_stat(stat_name):
+                """Automatically abbreviate long stat names using pattern matching."""
+                abbreviations = {
+                    "Player": "P", "Opponent": "Opp",
+                    "Serving": "Srvng", "Return": "Rtrn", 
+                    "First": "1st", "Second": "2nd",
+                    "Forehand": "FH", "Backhand": "BH",
+                    "Smash": "Sm", "Winners": "Win", "Errors": "Err",
+                    "Points": "Pts","Volley": "Vol", "Serve": "Srv"
+                }
+                
+                # Apply abbreviations
+                result = stat_name
+                for full, abbrev in abbreviations.items():
+                    result = result.replace(full, abbrev)
+                
+                return result
+            
+            # Add detailed shot-by-shot stats with automatic abbreviations
             f.write(f"\nDETAILED SHOT STATS:\n")
             for key, value in instance.stats.items():
                 if key not in key_order:  # These are the detailed stats
+                    # Automatically abbreviate the stat name
+                    display_key = abbreviate_stat(key)
                     if isinstance(value, list):
-                        f.write(f"  {key}: Player {value[0]} | Opponent {value[1]}\n")
+                        f.write(f"  {display_key}: P{value[0]} | O{value[1]}\n")
                     else:
-                        f.write(f"  {key}: {value}\n")
+                        f.write(f"  {display_key}: {value}\n")
                         
         print(f"✅ TXT Summary saved at {txt_path}")
 
